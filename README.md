@@ -21,4 +21,4 @@ After that, to teardown and run the tests again:
 
 `docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker-compose down && docker-compose up -d && yarn test`
 
-> Note: You might need sudo to run these commands.
+> Note: You'll probably need sudo to run those commands.
