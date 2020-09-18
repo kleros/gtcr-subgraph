@@ -1,0 +1,46 @@
+{
+  "name": "gtcr-subgraph",
+  "version": "1.0.0",
+  "description": "Subgraph for Generalized TCR contracts",
+  "scripts": {
+    "migrate": "truffle migrate --all --reset",
+    "create-local": "graph create --node http://localhost:8020/ kleros/gtcr",
+    "remove-local": "graph remove --node http://localhost:8020/ kleros/gtcr",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 kleros/gtcr",
+    "deploy:mainnet": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ kleros/gtcr",
+    "codegen": "truffle exec render-templates.js && graph codegen && npm run fix-schema.ts",
+    "codegen:mainnet": "tnt iN && truffle exec --network=mainnet render-templates.js && graph codegen && npm run fix-schema.ts",
+    "build": "graph build",
+    "bootstrap-test": "wait-on tcp:8545 && npm run migrate && wait-on http-get://localhost:8000 && npm run create-local",
+    "bootstrap": "truffle compile --all && tnt iN",
+    "test-fresh-graph": "npm run codegen && wait-on tcp:5001 && npm run deploy-local && npm run test-existing-graph",
+    "test-existing-graph": "mocha",
+    "test": "npm run bootstrap-test && npm run test-fresh-graph",
+    "publish-graph:mainnet": "npm run codegen:mainnet && npm run deploy:mainnet"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kleros/gtcr-subgraph.git"
+  },
+  "author": "Kleros",
+  "license": "MIT",
+  "private": false,
+  "bugs": {
+    "url": "https://github.com/kleros/gtcr-subgraph/issues"
+  },
+  "homepage": "https://github.com/kleros/gtcr-subgraph#readme",
+  "devDependencies": {
+    "@kleros/erc-792": "^4.0.1",
+    "@kleros/tcr": "^2.0.0",
+    "@truffle/contract": "^4.2.22",
+    "@truffle/hdwallet-provider": "^1.1.0",
+    "axios": "^0.20.0",
+    "delay": "^4.4.0",
+    "ethers": "^5.0.14",
+    "fs-extra": "^9.0.1",
+    "mocha": "^8.1.3",
+    "mocha-steps": "^1.3.0",
+    "should": "^13.2.3",
+    "truffle": "^5.1.45"
+  }
+}
