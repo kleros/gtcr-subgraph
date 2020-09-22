@@ -1,4 +1,4 @@
-const seed = process.env.SEED || 'myth like bonus scare over problem client lizard pioneer submit female collect';
+const seed = process.env.SEED || 'home vapor crisp idea clock oblige frozen bubble rare law risk torch';
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 const networks = Object.assign(...[
@@ -24,7 +24,13 @@ const networks = Object.assign(...[
   },
   compilers: {
     solc: {
-      version: "0.5.16",
+      version: "^0.5.17",
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200   // Optimize for how many times you intend to run the code
+        }
+      }
     },
   },
 });

@@ -15,6 +15,7 @@ services:
     image: trufflesuite/ganache-cli
     ports:
       - '8545:8545'
+    command: -l 120000000
 
   graph-node:
     image: graphprotocol/graph-node

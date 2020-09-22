@@ -9,6 +9,7 @@ const path = require('path')
 const { gtcrEncode, ItemTypes } = require('@kleros/gtcr-encoder')
 const { expect } = require('chai')
 const { promisify } = require('util')
+const _GeneralizedTCR = require('../build/contracts/GeneralizedTCR.json')
 
 const provider = new Web3.providers.HttpProvider('http://localhost:8545')
 const web3 = new Web3(provider)
@@ -104,18 +105,36 @@ function advanceBlock () {
 
 describe('GTCR subgraph', function () {
   let centralizedArbitrator
+  let gtcrFactory
   let gtcr
 
   let submitter
   before('get deployed contracts and accouts', async function () {
     centralizedArbitrator = await SimpleCentralizedArbitrator.deployed()
-    gtcr = await GeneralizedTCR.deployed()
+    gtcrFactory = await gtcrFactory.deployed()
+    await gtcrFactory.deploy(
+      centralizedArbitrator.address, // Arbitrator to resolve potential disputes. The arbitrator is trusted to support appeal periods and not reenter.
+      '0x00', // Extra data for the trusted arbitrator contract.
+      accounts[0], // Connected TCR is not used (any address here works). // The address of the TCR that stores related TCR addresses. This parameter can be left empty.
+      '', // The URI of the meta evidence object for registration requests.
+      '', // The URI of the meta evidence object for clearing requests.
+      accounts[0], // The trusted governor of this contract.
+      0, // The base deposit to submit an item.
+      0, // The base deposit to remove an item.
+      0, // The base deposit to challenge a submission.
+      0, // The base deposit to challenge a removal request.
+      5, // The time in seconds parties have to challenge a request.
+      [0, 0, 0] // Multipliers of the arbitration cost in basis points (see MULTIPLIER_DIVISOR) as follows:
+    )
+    const gtcrAddr = await gtcrFactory.instances(0);
+    gtcr = web3.eth.Contract(_GeneralizedTCR, await gtcrFactory.instances(0))
+
 
     const accounts = await web3.eth.getAccounts()
     submitter = accounts[0]
   })
 
-  it('exists', async function () {
+  it('Exists', async function () {
     const { subgraphs } = await queryGraph(`{
       subgraphs(first: 1, where: {name: "${subgraphName}"}) {
         id

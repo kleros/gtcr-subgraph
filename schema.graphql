@@ -1,0 +1,82 @@
+enum Status {
+  "The item is not registered on the TCR and there are no pending requests."
+  Absent
+  "The item is registered and there are no pending requests."
+  Registered
+  "The item is not registered on the TCR, but there is a pending registration request."
+  RegistrationRequested
+  "The item is registered on the TCR, but there is a pending removal request. These are sometimes also called removal requests."
+  ClearingRequested
+}
+
+enum Ruling {
+  "The arbitrator did not rule or refused to rule."
+  None
+  "The arbitrator ruled in favor of the requester."
+  Accept
+  "The arbitrator in favor of the challenger."
+  Reject
+}
+
+type Item @entity {
+  id: ID!
+  "The data describing the item."
+  data: Bytes!
+  "The current status of the item."
+  status: Status!
+  "List of status change requests made for the item in the form requests[requestID]."
+  requests: [Request!]!
+}
+
+type Request @entity {
+  "The item ID (which is the keccak256 hash of its data)."
+  id: ID!
+  "True if a dispute was raised."
+  disputed: Boolean!
+  "ID of the dispute, if any."
+  disputeID: Int!
+  "Time when the request was made. Used to track when the challenge period ends."
+  submissionTime: BigInt!
+  "True if the request was executed and/or any raised disputes were resolved."
+  resolved: Boolean!
+  "The address of the party that made a request"
+  requester: Bytes!
+  "The address of the party that challenged the request"
+  challenger: Bytes!
+  "The arbitrator trusted to solve disputes for this request."
+  arbitrator: Bytes!
+  "The extra data for the trusted arbitrator of this request."
+  arbitratorExtraData: Bytes!
+  "The meta evidence to be used in a dispute for this case."
+  metaEvidenceID: Int!
+  "The final ruling given, if any."
+  ruling: Ruling!
+  "Tracks each round of a dispute in the form rounds[roundID]."
+  rounds: [Round!]!
+}
+
+type Round @entity {
+  id: ID!
+  "The total amount of appeal fees contributed to the requester in this round."
+  amountPaidRequester: BigInt!
+  "The total amount of appeal fees contributed to the challenger in this round."
+  amountpaidChallenger: BigInt!
+  "Whether the requester is fully funded."
+  hasPaidRequester: Boolean!
+  "Whether the challenger is fully funded."
+  hasPaidChallenger: Boolean!
+  "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
+  feeRewards: BigInt!
+  "The appeal fee contributions made in this round to the requester."
+  contributionsRequester: [Contribution!]!
+  "The appeal fee contributions made in this round to the challenger."
+  contributionsChallenger: [Contribution!]!
+}
+
+type Contribution @entity {
+  id: ID!
+  "The address of the party that made the contribution."
+  contributor: Bytes!
+  "The amount contributed."
+  amount: BigInt!
+}

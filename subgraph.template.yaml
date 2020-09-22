@@ -1,0 +1,48 @@
+specVersion: 0.0.2
+description: Generalized TCR
+repository: https://github.com/kleros/gtcr-subgraph
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: GTCRFactory
+    network: {{network}}
+    source:
+      address: '{{GTCRFactory.address}}'
+      abi: GTCRFactory
+      startBlock: {{GTCRFactory.startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities: []
+      abis:
+        - name: GTCRFactory
+          file: ./abis/GTCRFactory.json
+      eventHandlers:
+        - event: NewGTCR(indexed address)
+          handler: handleNewGTCR
+      file: ./src/GTCRFactoryMapping.ts
+templates:
+  - kind: ethereum/contract
+    name: GeneralizedTCR
+    network: {{network}}
+    source:
+      address: '{{GeneralizedTCR.address}}'
+      abi: GeneralizedTCR
+      startBlock: {{GeneralizedTCR.startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Item
+        - Request
+        - Round
+        - Contribution
+      abis:
+        - name: GeneralizedTCR
+          file: ./build/contracts/GeneralizedTCR.json
+      eventHandlers:
+        - event: ItemStatusChange(indexed bytes32,indexed uint256,indexed uint256,bool,bool)
+          handler: handleItemStatusChange

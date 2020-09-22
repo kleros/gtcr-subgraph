@@ -114,3 +114,5 @@ abis/
 generated/
 
 .env
+
+subgraph.yaml
