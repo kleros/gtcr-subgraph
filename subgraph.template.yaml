@@ -28,9 +28,7 @@ templates:
     name: GeneralizedTCR
     network: {{network}}
     source:
-      address: '{{GeneralizedTCR.address}}'
       abi: GeneralizedTCR
-      startBlock: {{GeneralizedTCR.startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
@@ -46,3 +44,4 @@ templates:
       eventHandlers:
         - event: ItemStatusChange(indexed bytes32,indexed uint256,indexed uint256,bool,bool)
           handler: handleItemStatusChange
+      file: ./src/GeneralizedTCRMapping.ts
