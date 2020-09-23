@@ -48,11 +48,13 @@ type Request @entity {
   "The extra data for the trusted arbitrator of this request."
   arbitratorExtraData: Bytes!
   "The meta evidence to be used in a dispute for this case."
-  metaEvidenceID: Int!
+  metaEvidenceID: BigInt!
   "The final ruling given, if any."
   ruling: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]!
+  "The ID of the evidence group for this request."
+  evidenceGroupID: BigInt!
 }
 
 type Round @entity {
@@ -67,16 +69,4 @@ type Round @entity {
   hasPaidChallenger: Boolean!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
-  "The appeal fee contributions made in this round to the requester."
-  contributionsRequester: [Contribution!]!
-  "The appeal fee contributions made in this round to the challenger."
-  contributionsChallenger: [Contribution!]!
-}
-
-type Contribution @entity {
-  id: ID!
-  "The address of the party that made the contribution."
-  contributor: Bytes!
-  "The amount contributed."
-  amount: BigInt!
 }

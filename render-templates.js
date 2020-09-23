@@ -16,7 +16,9 @@ module.exports = function(callback) {
     };
 
     for(const contractName of [
-      'GTCRFactory'
+      'GTCRFactory',
+      'IArbitrator',
+      'GeneralizedTCR'
     ]) {
       const { abi } = fs.readJsonSync(`build/contracts/${contractName}.json`);
       fs.outputJsonSync(`abis/${contractName}.json`, abi, { spaces: 2 });

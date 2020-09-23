@@ -77,7 +77,7 @@ async function waitForGraphSync (targetBlockNumber) {
 
     if (
       currentVersionId === latestVersionId &&
-      latestEthereumBlockNumber === targetBlockNumber
+      latestEthereumBlockNumber.toString() === targetBlockNumber.toString()
     ) { break }
   }
 }
@@ -146,7 +146,7 @@ describe('GTCR subgraph', function () {
     gtcr = new ethers.Contract(gtcrAddress, _GeneralizedTCR.abi, signer)
   })
 
-  it('Exists', async function () {
+  it('subgraph exists', async function () {
     const { subgraphs } = await queryGraph(`{
       subgraphs(first: 1, where: {name: "${subgraphName}"}) {
         id
@@ -156,7 +156,7 @@ describe('GTCR subgraph', function () {
     subgraphs.should.be.not.empty()
   })
 
-  step('Submit item', async function () {
+  step('add item', async function () {
     const columns = [
       {
         label: 'Name',
@@ -172,36 +172,36 @@ describe('GTCR subgraph', function () {
       Ticker: 'PNK'
     }
 
-    const [, REGISTERED, REGISTRATION_REQUESTED] = [0, 1, 2, 3, 4]
+    const REGISTRATION_REQUESTED = 'RegistrationRequested'
+    const REGISTERED = 'Registered'
 
     const arbitrationCost = await centralizedArbitrator.arbitrationCost('0x00')
-    const submissionBaseDeposit = await gtcr.submissionBaseDeposit()
     const encodedData = gtcrEncode({ columns, values: tokenData })
 
     await gtcr.addItem(encodedData, { from: submitter, value: arbitrationCost.toString() })
 
     const itemID = await gtcr.itemList(0)
 
-    // await advanceBlock()
-    // await waitForGraphSync()
-    // expect((await querySubgraph(`{
-    //   gtcr(id: "${itemID}") {
-    //     data
-    //     status
-    //   }
-    // }`)).gtcr).to.deep.equal({ data: encodedData, status: REGISTRATION_REQUESTED })
+    await advanceBlock()
+    await waitForGraphSync()
+    expect((await querySubgraph(`{
+      item(id: "${itemID}") {
+        id
+        data
+        status
+      }
+    }`)).item).to.deep.equal({ id: itemID, data: encodedData, status: REGISTRATION_REQUESTED })
 
 
     await increaseTime(10)
     await gtcr.executeRequest(itemID, { from: submitter })
 
-    // await advanceBlock()
-    // await waitForGraphSync()
-    // expect((await querySubgraph(`{
-    //   gtcr(id: "${itemID}") {
-    //     data
-    //     status
-    //   }
-    // }`)).gtcr).to.deep.equal({ data: encodedData, status: REGISTERED })
+    await advanceBlock()
+    await waitForGraphSync()
+    expect((await querySubgraph(`{
+      item(id: "${itemID}") {
+        status
+      }
+    }`)).item).to.deep.equal({ status: REGISTERED })
   })
 })
