@@ -1,5 +1,5 @@
 
-/* global describe, it, before, step */
+/* global describe, before, step */
 const Web3 = require('web3')
 const TruffleContract = require('@truffle/contract')
 const { default: axios } = require('axios')
@@ -17,6 +17,7 @@ const web3Provider = new Web3.providers.HttpProvider('http://localhost:8545')
 const ethersProvider = new ethers.providers.JsonRpcProvider()
 const web3 = new Web3(web3Provider)
 const signer = ethersProvider.getSigner()
+const { BigNumber } = ethers
 
 function getContract (contractName) {
   const C = TruffleContract(fs.readJsonSync(path.join(
@@ -107,6 +108,13 @@ function advanceBlock () {
   })
 }
 
+const NONE = "None";
+const ACCEPT = "Accept";
+const REJECT = "Reject";
+
+const submissionBaseDeposit = BigNumber.from(0)
+const arbitratorExtraData = "0x00"
+
 describe('GTCR subgraph', function () {
   let centralizedArbitrator
   let gtcrFactory
@@ -128,15 +136,15 @@ describe('GTCR subgraph', function () {
 
     await gtcrFactory.deploy(
       centralizedArbitrator.address, // Arbitrator to resolve potential disputes. The arbitrator is trusted to support appeal periods and not reenter.
-      '0x00', // Extra data for the trusted arbitrator contract.
+      arbitratorExtraData,// Extra data for the trusted arbitrator contract.
       accounts[0], // Connected TCR is not used (any address here works for this test). // The address of the TCR that stores related TCR addresses. This parameter can be left empty.
       '', // The URI of the meta evidence object for registration requests.
       '', // The URI of the meta evidence object for clearing requests.
       accounts[0], // The trusted governor of this contract.
-      0, // The base deposit to submit an item.
-      0, // The base deposit to remove an item.
-      0, // The base deposit to challenge a submission.
-      0, // The base deposit to challenge a removal request.
+      submissionBaseDeposit, // The base deposit to submit an item.
+      submissionBaseDeposit, // The base deposit to remove an item.
+      submissionBaseDeposit, // The base deposit to challenge a submission.
+      submissionBaseDeposit, // The base deposit to challenge a removal request.
       5, // The time in seconds parties have to challenge a request.
       [0, 0, 0], // Multipliers of the arbitration cost in basis points.
       { from: submitter }
@@ -146,7 +154,7 @@ describe('GTCR subgraph', function () {
     gtcr = new ethers.Contract(gtcrAddress, _GeneralizedTCR.abi, signer)
   })
 
-  it('subgraph exists', async function () {
+  step('subgraph exists', async function () {
     const { subgraphs } = await queryGraph(`{
       subgraphs(first: 1, where: {name: "${subgraphName}"}) {
         id
@@ -173,14 +181,20 @@ describe('GTCR subgraph', function () {
     }
 
     const REGISTRATION_REQUESTED = 'RegistrationRequested'
-    const REGISTERED = 'Registered'
 
-    const arbitrationCost = await centralizedArbitrator.arbitrationCost('0x00')
+    const arbitrationCost = BigNumber.from((await centralizedArbitrator.arbitrationCost(arbitratorExtraData)).toString())
+    const submissionDeposit = arbitrationCost.add(submissionBaseDeposit)
     const encodedData = gtcrEncode({ columns, values: tokenData })
 
-    await gtcr.addItem(encodedData, { from: submitter, value: arbitrationCost.toString() })
-
+    await gtcr.addItem(encodedData, { from: submitter, value: submissionDeposit.toString() })
     const itemID = await gtcr.itemList(0)
+    const log = (await ethersProvider.getLogs({
+      ...gtcr.filters.ItemSubmitted(itemID),
+      fromBlock: 0
+    })).map(log => gtcr.interface.parseLog(log))[0]
+    const [,,evidenceGroupID] = log.args
+    const { timestamp } = await ethersProvider.getBlock(log.blockNumber)
+
 
     await advanceBlock()
     await waitForGraphSync()
@@ -189,19 +203,63 @@ describe('GTCR subgraph', function () {
         id
         data
         status
+        numberOfRequests
+        requests {
+          id
+          disputed
+          arbitrator
+          arbitratorExtraData
+          challenger
+          requester
+          metaEvidenceID
+          ruling
+          resolved
+          disputeID
+          submissionTime
+          evidenceGroupID
+          numberOfRounds
+          rounds {
+            id
+            amountPaidRequester
+            amountpaidChallenger
+            feeRewards
+            hasPaidRequester
+            hasPaidChallenger
+          }
+        }
       }
-    }`)).item).to.deep.equal({ id: itemID, data: encodedData, status: REGISTRATION_REQUESTED })
-
-
-    await increaseTime(10)
-    await gtcr.executeRequest(itemID, { from: submitter })
-
-    await advanceBlock()
-    await waitForGraphSync()
-    expect((await querySubgraph(`{
-      item(id: "${itemID}") {
-        status
-      }
-    }`)).item).to.deep.equal({ status: REGISTERED })
+    }`)).item).to.deep.equal({
+      id: itemID,
+      data: encodedData,
+      status: REGISTRATION_REQUESTED,
+      numberOfRequests: 1,
+      requests: [
+        {
+          id: `${itemID}-0`,
+          disputed: false,
+          arbitrator: centralizedArbitrator.address.toLowerCase(),
+          arbitratorExtraData: '0x00',
+          challenger: '0x0000000000000000000000000000000000000000',
+          requester: submitter.toLowerCase(),
+          metaEvidenceID: "0",
+          ruling: NONE,
+          resolved: false,
+          disputeID: 0,
+          submissionTime: timestamp.toString(),
+          evidenceGroupID: evidenceGroupID.toString(),
+          numberOfRounds: 1,
+          rounds: [
+            {
+              amountPaidRequester: submissionDeposit.toString(),
+              amountpaidChallenger: "0",
+              feeRewards: "0",
+              hasPaidChallenger: false,
+              hasPaidRequester: true,
+              id: `${itemID}-0-0`
+            }
+          ]
+        }
+      ]
+    })
   })
 })
