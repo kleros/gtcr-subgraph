@@ -108,11 +108,23 @@ function advanceBlock () {
   })
 }
 
-const NONE = "None";
-const ACCEPT = "Accept";
-const REJECT = "Reject";
+const Status = {
+  Absent: 'Absent',
+  RegistrationRequested: 'RegistrationRequested',
+  Registered: 'Registered',
+  ClearingRequested: 'ClearingRequested'
+}
+
+const Ruling = {
+  None: 'None',
+  Accept: 'Accept',
+  Reject: 'Reject',
+}
 
 const submissionBaseDeposit = BigNumber.from(0)
+const submissionChallengeBaseDeposit = BigNumber.from(0)
+const removalBaseDeposit = BigNumber.from(0)
+const removalChallengeBaseDeposit = BigNumber.from(0)
 const arbitratorExtraData = "0x00"
 
 describe('GTCR subgraph', function () {
@@ -142,9 +154,9 @@ describe('GTCR subgraph', function () {
       '', // The URI of the meta evidence object for clearing requests.
       accounts[0], // The trusted governor of this contract.
       submissionBaseDeposit, // The base deposit to submit an item.
-      submissionBaseDeposit, // The base deposit to remove an item.
-      submissionBaseDeposit, // The base deposit to challenge a submission.
-      submissionBaseDeposit, // The base deposit to challenge a removal request.
+      removalBaseDeposit, // The base deposit to remove an item.
+      submissionChallengeBaseDeposit, // The base deposit to challenge a submission.
+      removalChallengeBaseDeposit, // The base deposit to challenge a removal request.
       5, // The time in seconds parties have to challenge a request.
       [0, 0, 0], // Multipliers of the arbitration cost in basis points.
       { from: submitter }
@@ -164,6 +176,9 @@ describe('GTCR subgraph', function () {
     subgraphs.should.be.not.empty()
   })
 
+
+  let itemID
+  let arbitrationCost
   step('add item', async function () {
     const columns = [
       {
@@ -179,15 +194,13 @@ describe('GTCR subgraph', function () {
       Name: 'Pinakion',
       Ticker: 'PNK'
     }
-
-    const REGISTRATION_REQUESTED = 'RegistrationRequested'
-
-    const arbitrationCost = BigNumber.from((await centralizedArbitrator.arbitrationCost(arbitratorExtraData)).toString())
-    const submissionDeposit = arbitrationCost.add(submissionBaseDeposit)
     const encodedData = gtcrEncode({ columns, values: tokenData })
 
+    arbitrationCost = BigNumber.from((await centralizedArbitrator.arbitrationCost(arbitratorExtraData)).toString())
+    const submissionDeposit = arbitrationCost.add(submissionBaseDeposit)
+
     await gtcr.addItem(encodedData, { from: submitter, value: submissionDeposit.toString() })
-    const itemID = await gtcr.itemList(0)
+    itemID = await gtcr.itemList(0)
     const log = (await ethersProvider.getLogs({
       ...gtcr.filters.ItemSubmitted(itemID),
       fromBlock: 0
@@ -231,7 +244,7 @@ describe('GTCR subgraph', function () {
     }`)).item).to.deep.equal({
       id: itemID,
       data: encodedData,
-      status: REGISTRATION_REQUESTED,
+      status: Status.RegistrationRequested,
       numberOfRequests: 1,
       requests: [
         {
@@ -242,7 +255,7 @@ describe('GTCR subgraph', function () {
           challenger: '0x0000000000000000000000000000000000000000',
           requester: submitter.toLowerCase(),
           metaEvidenceID: "0",
-          ruling: NONE,
+          ruling: Ruling.None,
           resolved: false,
           disputeID: 0,
           submissionTime: timestamp.toString(),
@@ -261,5 +274,73 @@ describe('GTCR subgraph', function () {
         }
       ]
     })
+
+    increaseTime(5)
+    await gtcr.executeRequest(itemID)
+    await waitForGraphSync()
+    expect((await querySubgraph(`{
+      item(id: "${itemID}") {
+        id
+        data
+        status
+        numberOfRequests
+        requests {
+          id
+          disputed
+          arbitrator
+          arbitratorExtraData
+          challenger
+          requester
+          metaEvidenceID
+          ruling
+          resolved
+          disputeID
+          submissionTime
+          evidenceGroupID
+          numberOfRounds
+          rounds {
+            id
+            amountPaidRequester
+            amountpaidChallenger
+            feeRewards
+            hasPaidRequester
+            hasPaidChallenger
+          }
+        }
+      }
+    }`)).item).to.deep.equal({
+      id: itemID,
+      data: encodedData,
+      status: Status.Registered,
+      numberOfRequests: 1,
+      requests: [
+        {
+          id: `${itemID}-0`,
+          disputed: false,
+          arbitrator: centralizedArbitrator.address.toLowerCase(),
+          arbitratorExtraData: '0x00',
+          challenger: '0x0000000000000000000000000000000000000000',
+          requester: submitter.toLowerCase(),
+          metaEvidenceID: "0",
+          ruling: Ruling.None,
+          resolved: true,
+          disputeID: 0,
+          submissionTime: timestamp.toString(),
+          evidenceGroupID: evidenceGroupID.toString(),
+          numberOfRounds: 1,
+          rounds: [
+            {
+              amountPaidRequester: submissionDeposit.toString(),
+              amountpaidChallenger: "0",
+              feeRewards: "0",
+              hasPaidChallenger: false,
+              hasPaidRequester: true,
+              id: `${itemID}-0-0`
+            }
+          ]
+        }
+      ]
+    })
+
   })
 })

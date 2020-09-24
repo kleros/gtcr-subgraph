@@ -1,6 +1,6 @@
 import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts'
 import { Item, Request, Round } from '../generated/schema'
-import { GeneralizedTCR, ItemSubmitted } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
+import { GeneralizedTCR, ItemStatusChange, ItemSubmitted } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
 import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator'
 
 // Items on a TCR can be in 1 of 4 states:
@@ -37,7 +37,7 @@ let ZERO_ADDRESS = Bytes.fromHexString("0x00000000000000000000000000000000000000
 export function handleItemSubmitted(event: ItemSubmitted): void {
   let tcr = GeneralizedTCR.bind(event.address)
   let itemInfo = tcr.getItemInfo(event.params._itemID)
-  log.info("GTCR: New item submitted {}",[event.params._itemID.toHexString()])
+  log.info("GTCR: New item submitted: {}",[event.params._itemID.toHexString()])
 
   let item = new Item(event.params._itemID.toHexString())
   item.data = itemInfo.value0
@@ -75,6 +75,41 @@ export function handleItemSubmitted(event: ItemSubmitted): void {
 
   item.requests = [request.id]
   item.save()
+}
 
-  log.info('GTCR: Done saving new item', [])
+export function handleRequestExecuted(event: ItemStatusChange): void {
+  if (event.params._resolved == false || event.params._disputed == true) return // No-op.
+
+  let itemID = event.params._itemID.toHexString()
+  let tcrAddress = event.address.toHexString()
+  log.info("GTCR: Request executed. Item ID {} of TCR at {}",[itemID, tcrAddress])
+  let item = Item.load(itemID)
+  if (item == null) {
+    log.error('GTCR: Item {} not found. Bailing.', [itemID])
+    return
+  }
+
+  if (item.status == REGISTRATION_REQUESTED) {
+    item.status = REGISTERED
+  } else if (item.status == CLEARING_REQUESTED) {
+    item.status = ABSENT
+  } else {
+    log.error('GTCR: invalid state for item {} of TCR {}', [itemID, tcrAddress])
+  }
+  item.save()
+
+  let request = Request.load(itemID + '-' + event.params._requestIndex.toString())
+  if (request == null) {
+    log.error(
+      'GTCR: Request {} of item {} of TCR {} not found. Bailing.',
+      [
+        event.params._requestIndex.toString(),
+        itemID,
+        tcrAddress
+      ]
+    )
+    return
+  }
+  request.resolved = true
+  request.save()
 }
