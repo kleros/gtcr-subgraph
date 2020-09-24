@@ -108,6 +108,41 @@ function advanceBlock () {
   })
 }
 
+function buildItemQuery (itemID) {
+  return `{
+    item(id: "${itemID}") {
+      id
+      data
+      status
+      numberOfRequests
+      requests {
+        id
+        disputed
+        arbitrator
+        arbitratorExtraData
+        challenger
+        requester
+        metaEvidenceID
+        winner
+        resolved
+        disputeID
+        submissionTime
+        evidenceGroupID
+        numberOfRounds
+        requestType
+        rounds {
+          id
+          amountPaidRequester
+          amountpaidChallenger
+          feeRewards
+          hasPaidRequester
+          hasPaidChallenger
+        }
+      }
+    }
+  }`
+}
+
 const Status = {
   Absent: 'Absent',
   RegistrationRequested: 'RegistrationRequested',
@@ -211,37 +246,7 @@ describe('GTCR subgraph', function () {
 
     await advanceBlock()
     await waitForGraphSync()
-    expect((await querySubgraph(`{
-      item(id: "${itemID}") {
-        id
-        data
-        status
-        numberOfRequests
-        requests {
-          id
-          disputed
-          arbitrator
-          arbitratorExtraData
-          challenger
-          requester
-          metaEvidenceID
-          ruling
-          resolved
-          disputeID
-          submissionTime
-          evidenceGroupID
-          numberOfRounds
-          rounds {
-            id
-            amountPaidRequester
-            amountpaidChallenger
-            feeRewards
-            hasPaidRequester
-            hasPaidChallenger
-          }
-        }
-      }
-    }`)).item).to.deep.equal({
+    expect((await querySubgraph(buildItemQuery(itemID))).item).to.deep.equal({
       id: itemID,
       data: encodedData,
       status: Status.RegistrationRequested,
@@ -255,12 +260,13 @@ describe('GTCR subgraph', function () {
           challenger: '0x0000000000000000000000000000000000000000',
           requester: submitter.toLowerCase(),
           metaEvidenceID: "0",
-          ruling: Ruling.None,
+          winner: Ruling.None,
           resolved: false,
           disputeID: 0,
           submissionTime: timestamp.toString(),
           evidenceGroupID: evidenceGroupID.toString(),
           numberOfRounds: 1,
+          requestType: Status.RegistrationRequested,
           rounds: [
             {
               amountPaidRequester: submissionDeposit.toString(),
@@ -278,37 +284,7 @@ describe('GTCR subgraph', function () {
     increaseTime(5)
     await gtcr.executeRequest(itemID)
     await waitForGraphSync()
-    expect((await querySubgraph(`{
-      item(id: "${itemID}") {
-        id
-        data
-        status
-        numberOfRequests
-        requests {
-          id
-          disputed
-          arbitrator
-          arbitratorExtraData
-          challenger
-          requester
-          metaEvidenceID
-          ruling
-          resolved
-          disputeID
-          submissionTime
-          evidenceGroupID
-          numberOfRounds
-          rounds {
-            id
-            amountPaidRequester
-            amountpaidChallenger
-            feeRewards
-            hasPaidRequester
-            hasPaidChallenger
-          }
-        }
-      }
-    }`)).item).to.deep.equal({
+    expect((await querySubgraph(buildItemQuery(itemID))).item).to.deep.equal({
       id: itemID,
       data: encodedData,
       status: Status.Registered,
@@ -322,12 +298,13 @@ describe('GTCR subgraph', function () {
           challenger: '0x0000000000000000000000000000000000000000',
           requester: submitter.toLowerCase(),
           metaEvidenceID: "0",
-          ruling: Ruling.None,
+          winner: Ruling.None,
           resolved: true,
           disputeID: 0,
           submissionTime: timestamp.toString(),
           evidenceGroupID: evidenceGroupID.toString(),
           numberOfRounds: 1,
+          requestType: Status.RegistrationRequested,
           rounds: [
             {
               amountPaidRequester: submissionDeposit.toString(),

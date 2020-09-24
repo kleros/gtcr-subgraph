@@ -51,14 +51,16 @@ type Request @entity {
   arbitratorExtraData: Bytes!
   "The meta evidence to be used in a dispute for this case."
   metaEvidenceID: BigInt!
-  "The final ruling given, if any."
-  ruling: Ruling!
+  "The winner of the dispute, if any."
+  winner: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]!
   "The ID of the evidence group for this request."
   evidenceGroupID: BigInt!
   "The total number of rounds on this request."
   numberOfRounds: Int!
+  "Whether it was requested to add or remove the item to/from the list."
+  requestType: Status!
 }
 
 type Round @entity {

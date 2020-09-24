@@ -15,14 +15,17 @@ import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator'
 // passing the challenge period or via dispute resolution), the item state is updated to 0 or 1.
 
 
-  const ABSENT = "Absent"
-  const REGISTERED = "Registered"
-  const REGISTRATION_REQUESTED = "RegistrationRequested"
-  const CLEARING_REQUESTED = "ClearingRequested"
+const ABSENT = "Absent"
+const REGISTERED = "Registered"
+const REGISTRATION_REQUESTED = "RegistrationRequested"
+const CLEARING_REQUESTED = "ClearingRequested"
 
-  const NONE = "None"
-  const ACCEPT = "Accept"
-  const REJECT = "Reject"
+const NONE = "None"
+const ACCEPT = "Accept"
+const REJECT = "Reject"
+
+const REQUESTER = "Requester"
+const CHALLENGER = "Challenger"
 
 function getStatus(status: number): string {
   if (status == 0) return ABSENT
@@ -32,12 +35,20 @@ function getStatus(status: number): string {
   return "Error"
 }
 
+function getWinner(outcome: number): string {
+  if (outcome == 0) return NONE
+  if (outcome == 1) return REQUESTER
+  if (outcome == 2) return CHALLENGER
+  return "Error"
+}
+
 let ZERO_ADDRESS = Bytes.fromHexString("0x0000000000000000000000000000000000000000") as Bytes
 
 export function handleItemSubmitted(event: ItemSubmitted): void {
+  log.info("GTCR: New item submitted: {}",[event.params._itemID.toHexString()])
+
   let tcr = GeneralizedTCR.bind(event.address)
   let itemInfo = tcr.getItemInfo(event.params._itemID)
-  log.info("GTCR: New item submitted: {}",[event.params._itemID.toHexString()])
 
   let item = new Item(event.params._itemID.toHexString())
   item.data = itemInfo.value0
@@ -52,12 +63,13 @@ export function handleItemSubmitted(event: ItemSubmitted): void {
   request.challenger = ZERO_ADDRESS
   request.requester = event.params._submitter
   request.metaEvidenceID = BigInt.fromI32(2).times(tcr.metaEvidenceUpdates())
-  request.ruling = NONE
+  request.winner = NONE
   request.resolved = false
   request.disputeID = 0
   request.submissionTime = event.block.timestamp
   request.evidenceGroupID = event.params._evidenceGroupID
   request.numberOfRounds = 1
+  request.requestType = REGISTRATION_REQUESTED
 
   let roundID = requestID + '-0'
   let round = new Round(roundID)
@@ -77,26 +89,26 @@ export function handleItemSubmitted(event: ItemSubmitted): void {
   item.save()
 }
 
-export function handleRequestExecuted(event: ItemStatusChange): void {
-  if (event.params._resolved == false || event.params._disputed == true) return // No-op.
+export function handleRequestResolved(event: ItemStatusChange): void {
+  if (event.params._resolved == false) return // No-op.
 
   let itemID = event.params._itemID.toHexString()
   let tcrAddress = event.address.toHexString()
-  log.info("GTCR: Request executed. Item ID {} of TCR at {}",[itemID, tcrAddress])
+  log.info("GTCR: Request resolved. Item ID {} of TCR at {}",[itemID, tcrAddress])
+
+  let tcr = GeneralizedTCR.bind(event.address)
+  let itemInfo = tcr.getItemInfo(event.params._itemID)
+
   let item = Item.load(itemID)
   if (item == null) {
     log.error('GTCR: Item {} not found. Bailing.', [itemID])
     return
   }
 
-  if (item.status == REGISTRATION_REQUESTED) {
-    item.status = REGISTERED
-  } else if (item.status == CLEARING_REQUESTED) {
-    item.status = ABSENT
-  } else {
-    log.error('GTCR: invalid state for item {} of TCR {}', [itemID, tcrAddress])
-  }
+  item.status = getStatus(itemInfo.value1)
   item.save()
+
+  let requestInfo = tcr.getRequestInfo(event.params._itemID, event.params._requestIndex)
 
   let request = Request.load(itemID + '-' + event.params._requestIndex.toString())
   if (request == null) {
@@ -111,5 +123,7 @@ export function handleRequestExecuted(event: ItemStatusChange): void {
     return
   }
   request.resolved = true
+  request.winner = getWinner(requestInfo.value6)
+
   request.save()
 }
