@@ -45,6 +45,16 @@ function getWinner(outcome: number): string {
   return "Error"
 }
 
+function buildNewRound(roundID: string): Round {
+  let newRound = new Round(roundID)
+  newRound.amountPaidRequester = BigInt.fromI32(0)
+  newRound.amountPaidChallenger = BigInt.fromI32(0)
+  newRound.feeRewards = BigInt.fromI32(0)
+  newRound.hasPaidRequester = false
+  newRound.hasPaidChallenger = false
+  return newRound
+}
+
 let ZERO_ADDRESS =
   Bytes.fromHexString("0x0000000000000000000000000000000000000000") as Bytes
 
@@ -95,18 +105,18 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
   let arbitrator = IArbitrator.bind(request.arbitrator as Address)
   if (request.requestType == REGISTRATION_REQUESTED) {
     round.amountPaidRequester = tcr.submissionBaseDeposit()
-    .plus(
-      arbitrator.arbitrationCost(request.arbitratorExtraData)
-    )
+      .plus(
+        arbitrator.arbitrationCost(request.arbitratorExtraData)
+      )
   } else {
     round.amountPaidRequester = tcr.removalBaseDeposit()
-    .plus(
-      arbitrator.arbitrationCost(request.arbitratorExtraData)
-    )
+      .plus(
+        arbitrator.arbitrationCost(request.arbitratorExtraData)
+      )
   }
 
+  round.feeRewards = round.amountPaidRequester
   round.amountPaidChallenger = BigInt.fromI32(0)
-  round.feeRewards = BigInt.fromI32(0)
   round.hasPaidRequester = true
   round.hasPaidChallenger = false
   round.save()
@@ -191,34 +201,110 @@ export function handleRequestChallenged(event: Dispute): void {
   let roundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString()
   let round = Round.load(roundID)
   let arbitrator = IArbitrator.bind(request.arbitrator as Address)
+  let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData)
   if (request.requestType == REGISTRATION_REQUESTED)
     round.amountPaidChallenger = tcr
       .submissionChallengeBaseDeposit()
-      .plus(
-        arbitrator.arbitrationCost(request.arbitratorExtraData)
-      )
+      .plus(arbitrationCost)
   else
     round.amountPaidChallenger = tcr
       .removalChallengeBaseDeposit()
-      .plus(
-        arbitrator.arbitrationCost(request.arbitratorExtraData)
-      )
+      .plus(arbitrationCost)
 
+  round.feeRewards = round.feeRewards
+    .plus(round.amountPaidChallenger)
+    .minus(arbitrationCost)
   round.hasPaidChallenger = true
   round.save()
 
-  let newRound = new Round(
-    requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
-  )
-  newRound.amountPaidRequester = BigInt.fromI32(0)
-  newRound.amountPaidChallenger = BigInt.fromI32(0)
-  newRound.feeRewards = BigInt.fromI32(0)
-  newRound.hasPaidRequester = false
-  newRound.hasPaidChallenger = false
+  let newRoundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+  let newRound = buildNewRound(newRoundID)
   newRound.save()
 
   let rounds = request.rounds
   rounds.push(newRound.id)
   request.rounds = rounds
   request.save()
+}
+
+export function handleAppealContribution(event: AppealContribution): void {
+  let tcr = GeneralizedTCR.bind(event.address)
+  let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
+  let item = Item.load(graphItemID)
+  if (item == null) {
+    log.error(
+      'GTCR: Item {} @ {} not found. Bailing handleRequestResolved.',
+      [event.params._itemID.toHexString(), event.address.toHexString()]
+    )
+    return
+  }
+
+  let itemInfo = tcr.getItemInfo(event.params._itemID)
+  let requestID = graphItemID + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+
+  let requestInfo = tcr.getRequestInfo(event.params._itemID, itemInfo.value2.minus(BigInt.fromI32(1)))
+  let roundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+  let round = Round.load(roundID)
+  if (event.params._side == REQUESTER_CODE) {
+    round.amountPaidRequester = round.amountPaidRequester.plus(event.params._amount)
+  } else {
+    round.amountPaidChallenger = round.amountPaidChallenger.plus(event.params._amount)
+  }
+
+  round.save()
+}
+
+export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
+  let tcr = GeneralizedTCR.bind(event.address)
+  let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
+  let item = Item.load(graphItemID)
+  if (item == null) {
+    log.error(
+      'GTCR: Item {} @ {} not found. Bailing handleRequestResolved.',
+      [event.params._itemID.toHexString(), event.address.toHexString()]
+    )
+    return
+  }
+
+  let itemInfo = tcr.getItemInfo(event.params._itemID)
+  let requestID = graphItemID + '-' +
+    itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+
+  let requestInfo = tcr.getRequestInfo(
+    event.params._itemID,
+    itemInfo.value2.minus(BigInt.fromI32(1))
+  )
+  let roundID = requestID + '-'
+    + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+  let round = Round.load(roundID)
+  if (event.params._side == REQUESTER_CODE) {
+    round.hasPaidRequester = true
+  } else {
+    round.hasPaidRequester = true
+  }
+
+  if (round.hasPaidChallenger && round.hasPaidChallenger) {
+    let request = Request.load(graphItemID + '-' + event.params._request.toString())
+    let arbitrator = IArbitrator.bind(request.arbitrator as Address)
+    let appealCost = arbitrator.appealCost(
+      BigInt.fromI32(request.disputeID),
+      request.arbitratorExtraData
+    )
+    round.feeRewards = round.feeRewards.minus(appealCost)
+
+    let newRoundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+    let newRound = buildNewRound(newRoundID)
+    newRound.save()
+
+    let rounds = request.rounds
+    rounds.push(newRoundID)
+    request.rounds = rounds
+    request.save()
+  }
+
+  round.save()
+}
+
+export function handleRuling(event: Ruling): void {
+
 }

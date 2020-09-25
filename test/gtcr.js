@@ -27,7 +27,7 @@ function getContract (contractName) {
   return C
 }
 
-const SimpleCentralizedArbitrator = getContract('SimpleCentralizedArbitrator')
+const CentralizedArbitratorWithAppeal = getContract('CentralizedArbitratorWithAppeal')
 const GTCRFactory = getContract('GTCRFactory')
 
 async function queryGraph (query) {
@@ -156,6 +156,18 @@ const Ruling = {
   Reject: 'Reject',
 }
 
+const RulingCodes = {
+  None: 0,
+  Accept: 1,
+  Reject: 2,
+}
+
+const PartyCodes = {
+  None: 0,
+  Requester: 1,
+  Challenger: 2,
+}
+
 const submissionBaseDeposit = BigNumber.from(0)
 const submissionChallengeBaseDeposit = BigNumber.from(0)
 const removalBaseDeposit = BigNumber.from(0)
@@ -176,7 +188,7 @@ describe('GTCR subgraph', function () {
       gtcrFactory,
       accounts
     ] = await Promise.all([
-      SimpleCentralizedArbitrator.deployed(),
+      CentralizedArbitratorWithAppeal.deployed(),
       await GTCRFactory.deployed(),
       await web3.eth.getAccounts()
     ])
@@ -295,6 +307,7 @@ describe('GTCR subgraph', function () {
               ...baseRound,
               id: `${graphItemID}-0-0`,
               amountPaidRequester: submissionDeposit.toString(),
+              feeRewards: submissionDeposit.toString(),
             }
           ]
         }
@@ -332,7 +345,8 @@ describe('GTCR subgraph', function () {
       rounds: [{
         ...baseRound,
         amountPaidRequester: removalDeposit.toString(),
-        id: `${graphItemID}-1-0`
+        id: `${graphItemID}-1-0`,
+        feeRewards: removalDeposit.toString()
       }]
     })
 
@@ -343,6 +357,13 @@ describe('GTCR subgraph', function () {
     itemState.requests[1].disputed = true
     itemState.requests[1].rounds[0].hasPaidChallenger = true
     itemState.requests[1].rounds[0].amountPaidChallenger = removalChallengeDeposit.toString()
+    itemState.requests[1].rounds[0].feeRewards =
+      BigNumber
+        .from(itemState.requests[1].rounds[0].feeRewards)
+        .add(removalChallengeDeposit)
+        .sub(arbitrationCost)
+        .toString()
+
     itemState.requests[1].rounds.push({
       ...baseRound,
       hasPaidRequester: false,
@@ -351,5 +372,44 @@ describe('GTCR subgraph', function () {
 
     await waitForGraphSync()
     expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
+  })
+
+  step('funding and raising appeal', async function () {
+    await centralizedArbitrator.giveRuling(0, RulingCodes.Accept, { from: submitter })
+
+    const [
+      bnAppealCost,
+      winnerStakeMultiplier,
+      loserStakeMultiplier,
+      multiplierDivisor,
+    ] = await Promise.all([
+      centralizedArbitrator.appealCost(0, arbitratorExtraData),
+      gtcr.winnerStakeMultiplier(),
+      gtcr.loserStakeMultiplier(),
+      gtcr.MULTIPLIER_DIVISOR(),
+    ])
+
+    const appealCost = BigNumber.from(bnAppealCost)
+    const totalWinnerAppealDeposit =
+      appealCost.add(
+        appealCost.mul(winnerStakeMultiplier)
+      )
+      .div(multiplierDivisor)
+    const totalLoserAppealDeposit =
+      appealCost.add(
+        appealCost.mul(loserStakeMultiplier)
+      )
+    .div(multiplierDivisor)
+
+    await gtcr.fundAppeal(
+      itemID,
+      PartyCodes.Requester,
+      { from: submitter, value: totalWinnerAppealDeposit }
+    )
+    await gtcr.fundAppeal(
+      itemID,
+      PartyCodes.Challenger,
+      { from: submitter, value: totalLoserAppealDeposit }
+    )
   })
 })
