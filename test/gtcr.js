@@ -342,7 +342,9 @@ describe('GTCR subgraph', function () {
     itemState.requests[1].rounds[0].hasPaidChallenger = true
     itemState.requests[1].rounds[0].amountPaidChallenger = removalChallengeDeposit.toString()
     itemState.requests[1].rounds.push({
-      ...baseRound
+      ...baseRound,
+      hasPaidRequester: false,
+      id: `${itemID}-1-1`
     })
 
     await waitForGraphSync()

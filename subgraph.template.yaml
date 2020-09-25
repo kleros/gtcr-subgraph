@@ -48,6 +48,8 @@ templates:
           handler: handleRequestResolved
         - event: RequestEvidenceGroupID(indexed bytes32,indexed uint256,indexed uint256)
           handler: handleRequestSubmitted
+        - event: Dispute(indexed address,indexed uint256,uint256,uint256)
+          handler: handleRequestChallenged
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator
