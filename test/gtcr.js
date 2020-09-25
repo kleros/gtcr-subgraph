@@ -235,6 +235,7 @@ describe('GTCR subgraph', function () {
 
 
   let itemID
+  let graphItemID
   let arbitrationCost
   let itemState
   let encodedData
@@ -267,6 +268,7 @@ describe('GTCR subgraph', function () {
 
     await gtcr.addItem(encodedData, { from: submitter, value: submissionDeposit.toString() })
     itemID = await gtcr.itemList(0)
+    graphItemID = itemID + '@' + gtcr.address.toLowerCase()
     const log = (await ethersProvider.getLogs({
       ...gtcr.filters.ItemSubmitted(itemID),
       fromBlock: 0
@@ -278,34 +280,34 @@ describe('GTCR subgraph', function () {
     await advanceBlock()
     await waitForGraphSync()
     itemState = {
-      id: itemID,
+      id: graphItemID,
       data: encodedData,
       status: Status.RegistrationRequested,
       numberOfRequests: 1,
       requests: [
         {
           ...baseRequest,
-          id: `${itemID}-0`,
+          id: `${graphItemID}-0`,
           submissionTime: timestamp.toString(),
           evidenceGroupID: evidenceGroupID.toString(),
           rounds: [
             {
               ...baseRound,
-              id: `${itemID}-0-0`,
+              id: `${graphItemID}-0-0`,
               amountPaidRequester: submissionDeposit.toString(),
             }
           ]
         }
       ]
     }
-    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
 
     increaseTime(challengePeriodDuration + 1)
     await gtcr.executeRequest(itemID)
     await waitForGraphSync()
     itemState.status = Status.Registered
     itemState.requests[0].resolved = true
-    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 
   step('challenge removal request', async function () {
@@ -323,14 +325,14 @@ describe('GTCR subgraph', function () {
     itemState.status = Status.ClearingRequested
     itemState.requests.push({
       ...baseRequest,
-      id: `${itemID}-1`,
+      id: `${graphItemID}-1`,
       requestType: Status.ClearingRequested,
       submissionTime: timestamp.toString(),
       evidenceGroupID: evidenceGroupID.toString(),
       rounds: [{
         ...baseRound,
         amountPaidRequester: removalDeposit.toString(),
-        id: `${itemID}-1-0`
+        id: `${graphItemID}-1-0`
       }]
     })
 
@@ -344,10 +346,10 @@ describe('GTCR subgraph', function () {
     itemState.requests[1].rounds.push({
       ...baseRound,
       hasPaidRequester: false,
-      id: `${itemID}-1-1`
+      id: `${graphItemID}-1-1`
     })
 
     await waitForGraphSync()
-    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 })

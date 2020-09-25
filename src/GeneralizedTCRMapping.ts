@@ -1,6 +1,6 @@
 import { Bytes, log, BigInt, Address, ByteArray } from '@graphprotocol/graph-ts'
 import { Item, Request, Round } from '../generated/schema'
-import { Dispute, GeneralizedTCR, ItemStatusChange, ItemSubmitted, RequestEvidenceGroupID, RequestSubmitted } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
+import { AppealContribution, Dispute, GeneralizedTCR, HasPaidAppealFee, ItemStatusChange, ItemSubmitted, RequestEvidenceGroupID, RequestSubmitted, Ruling } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
 import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator'
 
 // Items on a TCR can be in 1 of 4 states:
@@ -27,6 +27,9 @@ const REJECT = "Reject"
 const REQUESTER = "Requester"
 const CHALLENGER = "Challenger"
 
+const REQUESTER_CODE = 1
+const CHALLENGER_CODE = 2
+
 function getStatus(status: number): string {
   if (status == 0) return ABSENT
   if (status == 1) return REGISTERED
@@ -47,12 +50,12 @@ let ZERO_ADDRESS =
 
 export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
   let tcr = GeneralizedTCR.bind(event.address)
-  let itemID = event.params._itemID.toHexString()
+  let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
   let itemInfo = tcr.getItemInfo(event.params._itemID)
 
-  let item = Item.load(itemID)
+  let item = Item.load(graphItemID)
   if (item == null) {
-    item = new Item(event.params._itemID.toHexString())
+    item = new Item(graphItemID)
     item.data = itemInfo.value0
     item.numberOfRequests = 1
     item.requests = []
@@ -62,7 +65,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
   item.status = getStatus(itemInfo.value1)
 
   let requestID =
-    event.params._itemID.toHexString() +
+    graphItemID +
     '-' +
     itemInfo.value2.minus(BigInt.fromI32(1)).toString()
 
@@ -75,10 +78,8 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
 
   let metaEvidenceID = BigInt.fromI32(2).times(tcr.metaEvidenceUpdates())
   if (request.requestType == CLEARING_REQUESTED) {
-    log.info('GTCR: Clearing requested, metaEvidenceID before {}', [metaEvidenceID.toString()])
     metaEvidenceID = metaEvidenceID.plus(BigInt.fromI32(1))
   }
-  log.info('GTCR: Clearing requested, metaEvidenceID after {}', [metaEvidenceID.toString()])
   request.metaEvidenceID = metaEvidenceID
   request.winner = NONE
   request.resolved = false
@@ -125,17 +126,17 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
 export function handleRequestResolved(event: ItemStatusChange): void {
   if (event.params._resolved == false) return // No-op.
 
-  let itemID = event.params._itemID.toHexString()
+  let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
   let tcrAddress = event.address.toHexString()
 
   let tcr = GeneralizedTCR.bind(event.address)
   let itemInfo = tcr.getItemInfo(event.params._itemID)
 
-  let item = Item.load(itemID)
+  let item = Item.load(graphItemID)
   if (item == null) {
     log.error(
       'GTCR: Item {} @ {} not found. Bailing handleRequestResolved.',
-      [itemID, tcrAddress]
+      [event.params._itemID.toHexString(), tcrAddress]
     )
     return
   }
@@ -145,13 +146,13 @@ export function handleRequestResolved(event: ItemStatusChange): void {
 
   let requestInfo = tcr.getRequestInfo(event.params._itemID, event.params._requestIndex)
 
-  let request = Request.load(itemID + '-' + event.params._requestIndex.toString())
+  let request = Request.load(graphItemID + '-' + event.params._requestIndex.toString())
   if (request == null) {
     log.error(
       'GTCR: Request {} of item {} of TCR {} not found. Bailing.',
       [
         event.params._requestIndex.toString(),
-        itemID,
+        event.params._itemID.toHexString(),
         tcrAddress
       ]
     )
@@ -169,17 +170,20 @@ export function handleRequestChallenged(event: Dispute): void {
     event.params._arbitrator,
     event.params._disputeID
   )
-  let item = Item.load(itemID.toHexString())
+  let graphItemID = itemID.toHexString() + '@' + event.address.toHexString()
+  let item = Item.load(graphItemID)
   if (item == null) {
     log.error(
-      'GTCR: Item {} @ {} not found. Bailing handleRequestResolved.',
-      [itemID.toHexString(), event.address.toHexString()]
+      'GTCR: Item {} not found. Bailing handleRequestResolved.',
+      [graphItemID]
     )
     return
   }
 
   let itemInfo = tcr.getItemInfo(itemID)
-  let requestID = itemID.toHexString() + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+  let requestID = graphItemID
+    + '-'
+    + itemInfo.value2.minus(BigInt.fromI32(1)).toString()
   let request = Request.load(requestID)
   request.disputed = true
 
