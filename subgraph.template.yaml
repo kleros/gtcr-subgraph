@@ -44,12 +44,10 @@ templates:
         - name: IArbitrator
           file: ./abis/IArbitrator.json
       eventHandlers:
-        - event: ItemSubmitted(indexed bytes32,indexed address,indexed uint256,bytes)
-          handler: handleItemSubmitted
         - event: ItemStatusChange(indexed bytes32,indexed uint256,indexed uint256,bool,bool)
           handler: handleRequestResolved
-        - event: RequestSubmitted(indexed bytes32,indexed uint256,indexed uint8)
-          handler: handleRemoveItem
+        - event: RequestEvidenceGroupID(indexed bytes32,indexed uint256,indexed uint256)
+          handler: handleRequestSubmitted
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator
