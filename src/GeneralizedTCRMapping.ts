@@ -1,6 +1,6 @@
-import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts'
+import { Bytes, log, BigInt, Address, crypto, ByteArray } from '@graphprotocol/graph-ts'
 import { Item, Request, Round } from '../generated/schema'
-import { GeneralizedTCR, ItemStatusChange, ItemSubmitted } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
+import { GeneralizedTCR, ItemStatusChange, ItemSubmitted, RequestSubmitted } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
 import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator'
 
 // Items on a TCR can be in 1 of 4 states:
@@ -42,10 +42,17 @@ function getWinner(outcome: number): string {
   return "Error"
 }
 
-let ZERO_ADDRESS = Bytes.fromHexString("0x0000000000000000000000000000000000000000") as Bytes
+function concatByteArrays(a: ByteArray, b: ByteArray): ByteArray {
+  let out = new Uint8Array(a.length + b.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i];
+  for (let j = 0; j < b.length; j++) out[a.length + j] = b[j];
+  return out as ByteArray;
+}
+
+let ZERO_ADDRESS =
+Bytes.fromHexString("0x0000000000000000000000000000000000000000") as Bytes
 
 export function handleItemSubmitted(event: ItemSubmitted): void {
-  log.info("GTCR: New item submitted: {}",[event.params._itemID.toHexString()])
 
   let tcr = GeneralizedTCR.bind(event.address)
   let itemInfo = tcr.getItemInfo(event.params._itemID)
@@ -75,8 +82,12 @@ export function handleItemSubmitted(event: ItemSubmitted): void {
   let round = new Round(roundID)
 
   let arbitrator = IArbitrator.bind(request.arbitrator as Address)
-  round.amountPaidRequester = tcr.submissionBaseDeposit().plus(arbitrator.arbitrationCost(request.arbitratorExtraData))
-  round.amountpaidChallenger = BigInt.fromI32(0)
+  round.amountPaidRequester = tcr
+    .submissionBaseDeposit()
+    .plus(
+      arbitrator.arbitrationCost(request.arbitratorExtraData)
+    )
+  round.amountPaidChallenger = BigInt.fromI32(0)
   round.feeRewards = BigInt.fromI32(0)
   round.hasPaidRequester = true
   round.hasPaidChallenger = false
@@ -94,14 +105,16 @@ export function handleRequestResolved(event: ItemStatusChange): void {
 
   let itemID = event.params._itemID.toHexString()
   let tcrAddress = event.address.toHexString()
-  log.info("GTCR: Request resolved. Item ID {} of TCR at {}",[itemID, tcrAddress])
 
   let tcr = GeneralizedTCR.bind(event.address)
   let itemInfo = tcr.getItemInfo(event.params._itemID)
 
   let item = Item.load(itemID)
   if (item == null) {
-    log.error('GTCR: Item {} not found. Bailing.', [itemID])
+    log.error(
+      'GTCR: Item {} @ {} not found. Bailing handleRequestResolved.',
+      [itemID, tcrAddress]
+    )
     return
   }
 
@@ -126,4 +139,78 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   request.winner = getWinner(requestInfo.value6)
 
   request.save()
+}
+
+const REMOVAL_REQUEST_TYPE = 3
+export function handleRemoveItem(event: RequestSubmitted): void{
+  if (event.params._requestType != REMOVAL_REQUEST_TYPE) return
+
+  let itemID = event.params._itemID.toHexString()
+  let item = Item.load(itemID)
+  if (item == null) {
+    log.error(
+      'GTCR: Item {} @ {} not found. Bailing handleRemoveItem.',
+      [
+        itemID,
+        event.address.toHexString()
+      ]
+    )
+    return
+  }
+
+  item.status = CLEARING_REQUESTED
+  item.numberOfRequests++;
+
+  let tcr = GeneralizedTCR.bind(event.address)
+  let itemInfo = tcr.getItemInfo(event.params._itemID)
+
+  let requestID =
+    event.params._itemID.toHexString() +
+    '-' +
+    itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+
+  let evidenceGroupID = BigInt.fromUnsignedBytes(
+    crypto.keccak256(
+      concatByteArrays(
+        event.params._itemID,
+        Bytes.fromI32(itemInfo.value2.toI32())
+      )
+    ) as Bytes
+  )
+
+  let request = new Request(requestID)
+  request.disputed = false
+  request.arbitrator = tcr.arbitrator()
+  request.arbitratorExtraData = tcr.arbitratorExtraData()
+  request.challenger = ZERO_ADDRESS
+  request.requester = event.transaction.from
+  request.metaEvidenceID = BigInt.fromI32(2).times(tcr.metaEvidenceUpdates()).plus(BigInt.fromI32(1))
+  request.winner = NONE
+  request.resolved = false
+  request.disputeID = 0
+  request.submissionTime = event.block.timestamp
+  request.evidenceGroupID = evidenceGroupID
+  request.numberOfRounds = 1
+  request.requestType = CLEARING_REQUESTED
+
+  let roundID = requestID + '-0'
+  let round = new Round(roundID)
+
+  let arbitrator = IArbitrator.bind(request.arbitrator as Address)
+  round.amountPaidRequester = tcr
+    .removalBaseDeposit()
+    .plus(
+      arbitrator.arbitrationCost(request.arbitratorExtraData)
+    )
+  round.amountPaidChallenger = BigInt.fromI32(0)
+  round.feeRewards = BigInt.fromI32(0)
+  round.hasPaidRequester = true
+  round.hasPaidChallenger = false
+  round.save()
+
+  request.rounds =[round.id]
+  request.save()
+
+  item.requests.push(request.id)
+  item.save()
 }

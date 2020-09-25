@@ -48,6 +48,8 @@ templates:
           handler: handleItemSubmitted
         - event: ItemStatusChange(indexed bytes32,indexed uint256,indexed uint256,bool,bool)
           handler: handleRequestResolved
+        - event: RequestSubmitted(indexed bytes32,indexed uint256,indexed uint8)
+          handler: handleRemoveItem
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator

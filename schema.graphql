@@ -68,7 +68,7 @@ type Round @entity {
   "The total amount of appeal fees contributed to the requester in this round."
   amountPaidRequester: BigInt!
   "The total amount of appeal fees contributed to the challenger in this round."
-  amountpaidChallenger: BigInt!
+  amountPaidChallenger: BigInt!
   "Whether the requester is fully funded."
   hasPaidRequester: Boolean!
   "Whether the challenger is fully funded."

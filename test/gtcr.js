@@ -108,7 +108,7 @@ function advanceBlock () {
   })
 }
 
-function buildItemQuery (itemID) {
+function buildFullItemQuery (itemID) {
   return `{
     item(id: "${itemID}") {
       id
@@ -133,7 +133,7 @@ function buildItemQuery (itemID) {
         rounds {
           id
           amountPaidRequester
-          amountpaidChallenger
+          amountPaidChallenger
           feeRewards
           hasPaidRequester
           hasPaidChallenger
@@ -161,6 +161,7 @@ const submissionChallengeBaseDeposit = BigNumber.from(0)
 const removalBaseDeposit = BigNumber.from(0)
 const removalChallengeBaseDeposit = BigNumber.from(0)
 const arbitratorExtraData = "0x00"
+const challengePeriodDuration = 10
 
 describe('GTCR subgraph', function () {
   let centralizedArbitrator
@@ -192,13 +193,34 @@ describe('GTCR subgraph', function () {
       removalBaseDeposit, // The base deposit to remove an item.
       submissionChallengeBaseDeposit, // The base deposit to challenge a submission.
       removalChallengeBaseDeposit, // The base deposit to challenge a removal request.
-      5, // The time in seconds parties have to challenge a request.
+      challengePeriodDuration, // The time in seconds parties have to challenge a request.
       [0, 0, 0], // Multipliers of the arbitration cost in basis points.
       { from: submitter }
     )
     const gtcrAddress = await gtcrFactory.instances(0)
 
     gtcr = new ethers.Contract(gtcrAddress, _GeneralizedTCR.abi, signer)
+    baseRound = {
+      amountPaidRequester: "0",
+      amountPaidChallenger: "0",
+      feeRewards: "0",
+      hasPaidChallenger: false,
+      hasPaidRequester: true,
+    }
+
+    baseRequest = {
+      disputed: false,
+      arbitrator: centralizedArbitrator.address.toLowerCase(),
+      arbitratorExtraData: arbitratorExtraData,
+      challenger: '0x0000000000000000000000000000000000000000',
+      requester: submitter.toLowerCase(),
+      metaEvidenceID: "0",
+      winner: Ruling.None,
+      resolved: false,
+      disputeID: 0,
+      numberOfRounds: 1,
+      requestType: Status.RegistrationRequested,
+    }
   })
 
   step('subgraph exists', async function () {
@@ -214,6 +236,15 @@ describe('GTCR subgraph', function () {
 
   let itemID
   let arbitrationCost
+  let itemState
+  let encodedData
+  let submissionDeposit
+  let removalDeposit
+  let removalChallengeDeposit
+
+  let baseRound
+  let baseRequest
+
   step('add item', async function () {
     const columns = [
       {
@@ -229,10 +260,10 @@ describe('GTCR subgraph', function () {
       Name: 'Pinakion',
       Ticker: 'PNK'
     }
-    const encodedData = gtcrEncode({ columns, values: tokenData })
+    encodedData = gtcrEncode({ columns, values: tokenData })
 
     arbitrationCost = BigNumber.from((await centralizedArbitrator.arbitrationCost(arbitratorExtraData)).toString())
-    const submissionDeposit = arbitrationCost.add(submissionBaseDeposit)
+    submissionDeposit = arbitrationCost.add(submissionBaseDeposit)
 
     await gtcr.addItem(encodedData, { from: submitter, value: submissionDeposit.toString() })
     itemID = await gtcr.itemList(0)
@@ -246,78 +277,75 @@ describe('GTCR subgraph', function () {
 
     await advanceBlock()
     await waitForGraphSync()
-    expect((await querySubgraph(buildItemQuery(itemID))).item).to.deep.equal({
+    itemState = {
       id: itemID,
       data: encodedData,
       status: Status.RegistrationRequested,
       numberOfRequests: 1,
       requests: [
         {
+          ...baseRequest,
           id: `${itemID}-0`,
-          disputed: false,
-          arbitrator: centralizedArbitrator.address.toLowerCase(),
-          arbitratorExtraData: '0x00',
-          challenger: '0x0000000000000000000000000000000000000000',
-          requester: submitter.toLowerCase(),
-          metaEvidenceID: "0",
-          winner: Ruling.None,
-          resolved: false,
-          disputeID: 0,
           submissionTime: timestamp.toString(),
           evidenceGroupID: evidenceGroupID.toString(),
-          numberOfRounds: 1,
-          requestType: Status.RegistrationRequested,
           rounds: [
             {
+              ...baseRound,
+              id: `${itemID}-0-0`,
               amountPaidRequester: submissionDeposit.toString(),
-              amountpaidChallenger: "0",
-              feeRewards: "0",
-              hasPaidChallenger: false,
-              hasPaidRequester: true,
-              id: `${itemID}-0-0`
             }
           ]
         }
       ]
-    })
+    }
+    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
 
-    increaseTime(5)
+    increaseTime(challengePeriodDuration + 1)
     await gtcr.executeRequest(itemID)
     await waitForGraphSync()
-    expect((await querySubgraph(buildItemQuery(itemID))).item).to.deep.equal({
-      id: itemID,
-      data: encodedData,
-      status: Status.Registered,
-      numberOfRequests: 1,
-      requests: [
-        {
-          id: `${itemID}-0`,
-          disputed: false,
-          arbitrator: centralizedArbitrator.address.toLowerCase(),
-          arbitratorExtraData: '0x00',
-          challenger: '0x0000000000000000000000000000000000000000',
-          requester: submitter.toLowerCase(),
-          metaEvidenceID: "0",
-          winner: Ruling.None,
-          resolved: true,
-          disputeID: 0,
-          submissionTime: timestamp.toString(),
-          evidenceGroupID: evidenceGroupID.toString(),
-          numberOfRounds: 1,
-          requestType: Status.RegistrationRequested,
-          rounds: [
-            {
-              amountPaidRequester: submissionDeposit.toString(),
-              amountpaidChallenger: "0",
-              feeRewards: "0",
-              hasPaidChallenger: false,
-              hasPaidRequester: true,
-              id: `${itemID}-0-0`
-            }
-          ]
-        }
-      ]
+    itemState.status = Status.Registered
+    itemState.requests[0].resolved = true
+    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
+  })
+
+  step('challenge removal request', async function () {
+    removalDeposit = arbitrationCost.add(removalBaseDeposit)
+    await gtcr.removeItem(itemID, '/ipfs/Qw...', { from: submitter, value: removalDeposit.toString() })
+    const log = (await ethersProvider.getLogs({
+      ...gtcr.filters.RequestEvidenceGroupID(itemID, 1),
+      fromBlock: 0
+    })).map(log => gtcr.interface.parseLog(log))[0]
+
+    const evidenceGroupID = log.args[2]
+    const { timestamp } = await ethersProvider.getBlock(log.blockNumber)
+
+    itemState.numberOfRequests++
+    itemState.status = Status.ClearingRequested
+    itemState.requests.push({
+      ...baseRequest,
+      id: `${itemID}-1`,
+      requestType: Status.ClearingRequested,
+      submissionTime: timestamp.toString(),
+      evidenceGroupID: evidenceGroupID.toString(),
+      rounds: [{
+        ...baseRound,
+        amountPaidRequester: removalDeposit.toString(),
+        id: `${itemID}-1-0`
+      }]
     })
 
+    increaseTime(challengePeriodDuration/2)
+    removalChallengeDeposit = arbitrationCost.add(removalChallengeBaseDeposit)
+    await gtcr.challengeRequest(itemID, '/ipfs/Qw...', { from: submitter, value: removalChallengeDeposit.toString() })
+
+    itemState.requests[1].disputed = true
+    itemState.requests[1].rounds[0].hasPaidChallenger = true
+    itemState.requests[1].rounds[0].amountPaidChallenger = removalChallengeDeposit.toString()
+    itemState.requests[1].rounds.push({
+      ...baseRound
+    })
+
+    await waitForGraphSync()
+    expect((await querySubgraph(buildFullItemQuery(itemID))).item).to.deep.equal(itemState)
   })
 })
