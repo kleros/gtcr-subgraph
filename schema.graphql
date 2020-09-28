@@ -51,8 +51,8 @@ type Request @entity {
   arbitratorExtraData: Bytes!
   "The meta evidence to be used in a dispute for this case."
   metaEvidenceID: BigInt!
-  "The winner of the dispute, if any."
-  winner: Ruling!
+  "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."
+  disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]!
   "The ID of the evidence group for this request."

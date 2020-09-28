@@ -38,10 +38,10 @@ function getStatus(status: number): string {
   return "Error"
 }
 
-function getWinner(outcome: number): string {
+function getFinalRuling(outcome: number): string {
   if (outcome == 0) return NONE
-  if (outcome == 1) return REQUESTER
-  if (outcome == 2) return CHALLENGER
+  if (outcome == 1) return ACCEPT
+  if (outcome == 2) return REJECT
   return "Error"
 }
 
@@ -91,7 +91,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
     metaEvidenceID = metaEvidenceID.plus(BigInt.fromI32(1))
   }
   request.metaEvidenceID = metaEvidenceID
-  request.winner = NONE
+  request.disputeOutcome = NONE
   request.resolved = false
   request.disputeID = 0
   request.submissionTime = event.block.timestamp
@@ -169,7 +169,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
     return
   }
   request.resolved = true
-  request.winner = getWinner(requestInfo.value6)
+  request.disputeOutcome = getFinalRuling(requestInfo.value6)
 
   request.save()
 }
@@ -308,8 +308,4 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
   }
 
   round.save()
-}
-
-export function handleRuling(event: Ruling): void {
-
 }

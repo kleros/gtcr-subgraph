@@ -123,7 +123,7 @@ function buildFullItemQuery (itemID) {
         challenger
         requester
         metaEvidenceID
-        winner
+        disputeOutcome
         resolved
         disputeID
         submissionTime
@@ -154,6 +154,12 @@ const Ruling = {
   None: 'None',
   Accept: 'Accept',
   Reject: 'Reject',
+}
+
+const Party = {
+  None: 'None',
+  Requester: 'Requester',
+  Challenger: 'Challenger',
 }
 
 const RulingCodes = {
@@ -227,7 +233,7 @@ describe('GTCR subgraph', function () {
       challenger: '0x0000000000000000000000000000000000000000',
       requester: submitter.toLowerCase(),
       metaEvidenceID: "0",
-      winner: Ruling.None,
+      disputeOutcome: Ruling.None,
       resolved: false,
       disputeID: 0,
       numberOfRounds: 1,
@@ -445,10 +451,12 @@ describe('GTCR subgraph', function () {
     await centralizedArbitrator.giveRuling(0, RulingCodes.Accept, { from: submitter })
     increaseTime(4 * 60) // Appeal period is 3 minutes long.
 
-    // await centralizedArbitrator.executeRuling(0, { from: submitter })
-    // itemState.requests[1].resolved = true
+    await centralizedArbitrator.executeRuling(0, { from: submitter })
+    itemState.status = Status.Absent
+    itemState.requests[1].resolved = true
+    itemState.requests[1].disputeOutcome = Ruling.Accept
 
-    // await waitForGraphSync()
-    // expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
+    await waitForGraphSync()
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 })
