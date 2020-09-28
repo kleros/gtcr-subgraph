@@ -196,6 +196,7 @@ export function handleRequestChallenged(event: Dispute): void {
     + itemInfo.value2.minus(BigInt.fromI32(1)).toString()
   let request = Request.load(requestID)
   request.disputed = true
+  request.numberOfRounds = 2
 
   let requestInfo = tcr.getRequestInfo(itemID, itemInfo.value2.minus(BigInt.fromI32(1)))
   let roundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString()
@@ -239,16 +240,20 @@ export function handleAppealContribution(event: AppealContribution): void {
     return
   }
 
-  let itemInfo = tcr.getItemInfo(event.params._itemID)
-  let requestID = graphItemID + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+  let requestID = graphItemID + '-' + event.params._request.toString()
 
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, itemInfo.value2.minus(BigInt.fromI32(1)))
-  let roundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+  let roundID = requestID + '-' + event.params._round.toString()
   let round = Round.load(roundID)
   if (event.params._side == REQUESTER_CODE) {
     round.amountPaidRequester = round.amountPaidRequester.plus(event.params._amount)
+    let feeRewards = round.feeRewards
+    feeRewards = feeRewards.plus(round.amountPaidRequester)
+    round.feeRewards = feeRewards
   } else {
     round.amountPaidChallenger = round.amountPaidChallenger.plus(event.params._amount)
+    let feeRewards = round.feeRewards
+    feeRewards = feeRewards.plus(round.amountPaidChallenger)
+    round.feeRewards = feeRewards
   }
 
   round.save()
@@ -268,22 +273,22 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
 
   let itemInfo = tcr.getItemInfo(event.params._itemID)
   let requestID = graphItemID + '-' +
-    itemInfo.value2.minus(BigInt.fromI32(1)).toString()
+    event.params._request.toString()
 
   let requestInfo = tcr.getRequestInfo(
     event.params._itemID,
-    itemInfo.value2.minus(BigInt.fromI32(1))
+    event.params._request
   )
   let roundID = requestID + '-'
-    + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
+    + event.params._round.toString()
   let round = Round.load(roundID)
   if (event.params._side == REQUESTER_CODE) {
     round.hasPaidRequester = true
   } else {
-    round.hasPaidRequester = true
+    round.hasPaidChallenger = true
   }
 
-  if (round.hasPaidChallenger && round.hasPaidChallenger) {
+  if (round.hasPaidRequester && round.hasPaidChallenger) {
     let request = Request.load(graphItemID + '-' + event.params._request.toString())
     let arbitrator = IArbitrator.bind(request.arbitrator as Address)
     let appealCost = arbitrator.appealCost(
@@ -291,14 +296,14 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
       request.arbitratorExtraData
     )
     round.feeRewards = round.feeRewards.minus(appealCost)
-
     let newRoundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
     let newRound = buildNewRound(newRoundID)
     newRound.save()
-
     let rounds = request.rounds
     rounds.push(newRoundID)
     request.rounds = rounds
+
+    request.numberOfRounds = request.numberOfRounds + 1
     request.save()
   }
 

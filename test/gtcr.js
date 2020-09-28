@@ -355,6 +355,7 @@ describe('GTCR subgraph', function () {
     await gtcr.challengeRequest(itemID, '/ipfs/Qw...', { from: submitter, value: removalChallengeDeposit.toString() })
 
     itemState.requests[1].disputed = true
+    itemState.requests[1].numberOfRounds++
     itemState.requests[1].rounds[0].hasPaidChallenger = true
     itemState.requests[1].rounds[0].amountPaidChallenger = removalChallengeDeposit.toString()
     itemState.requests[1].rounds[0].feeRewards =
@@ -406,15 +407,48 @@ describe('GTCR subgraph', function () {
       { from: submitter, value: totalWinnerAppealDeposit }
     )
 
+    itemState.requests[1].rounds[1].hasPaidRequester = true
+    itemState.requests[1].rounds[1].amountPaidRequester = totalWinnerAppealDeposit.toString()
+    itemState.requests[1].rounds[1].feeRewards =
+      BigNumber
+        .from(itemState.requests[1].rounds[1].feeRewards)
+        .add(totalWinnerAppealDeposit)
+        .toString()
+
+    await waitForGraphSync()
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
+
     await gtcr.fundAppeal(
       itemID,
       PartyCodes.Challenger,
       { from: submitter, value: totalLoserAppealDeposit }
     )
 
+    itemState.requests[1].numberOfRounds++
+    itemState.requests[1].rounds[1].hasPaidChallenger = true
+    itemState.requests[1].rounds[1].amountPaidChallenger = totalWinnerAppealDeposit.toString()
+    itemState.requests[1].rounds[1].feeRewards =
+      BigNumber
+        .from(itemState.requests[1].rounds[1].feeRewards)
+        .add(totalLoserAppealDeposit)
+        .sub(appealCost)
+        .toString()
+
+    itemState.requests[1].rounds.push({
+      ...baseRound,
+      hasPaidRequester: false,
+      id: `${graphItemID}-1-2`
+    })
+    await waitForGraphSync()
+    expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
+
     await centralizedArbitrator.giveRuling(0, RulingCodes.Accept, { from: submitter })
     increaseTime(4 * 60) // Appeal period is 3 minutes long.
 
-    await centralizedArbitrator.executeRuling(0, { from: submitter })
+    // await centralizedArbitrator.executeRuling(0, { from: submitter })
+    // itemState.requests[1].resolved = true
+
+    // await waitForGraphSync()
+    // expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 })
