@@ -1,3 +1,3 @@
 module.exports = function(deployer) {
-  deployer.deploy(artifacts.require('CentralizedArbitratorWithAppeal'));
+  deployer.deploy(artifacts.require('TestArbitrator'));
 };

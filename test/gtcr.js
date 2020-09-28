@@ -27,7 +27,7 @@ function getContract (contractName) {
   return C
 }
 
-const CentralizedArbitratorWithAppeal = getContract('CentralizedArbitratorWithAppeal')
+const TestArbitrator = getContract('TestArbitrator')
 const GTCRFactory = getContract('GTCRFactory')
 
 async function queryGraph (query) {
@@ -188,7 +188,7 @@ describe('GTCR subgraph', function () {
       gtcrFactory,
       accounts
     ] = await Promise.all([
-      CentralizedArbitratorWithAppeal.deployed(),
+      TestArbitrator.deployed(),
       await GTCRFactory.deployed(),
       await web3.eth.getAccounts()
     ])
@@ -206,7 +206,7 @@ describe('GTCR subgraph', function () {
       submissionChallengeBaseDeposit, // The base deposit to challenge a submission.
       removalChallengeBaseDeposit, // The base deposit to challenge a removal request.
       challengePeriodDuration, // The time in seconds parties have to challenge a request.
-      [0, 0, 0], // Multipliers of the arbitration cost in basis points.
+      [10000, 10000, 10000], // Multipliers of the arbitration cost in basis points.
       { from: submitter }
     )
     const gtcrAddress = await gtcrFactory.instances(0)
@@ -389,27 +389,32 @@ describe('GTCR subgraph', function () {
       gtcr.MULTIPLIER_DIVISOR(),
     ])
 
-    const appealCost = BigNumber.from(bnAppealCost)
+    const appealCost = BigNumber.from(bnAppealCost.toString())
     const totalWinnerAppealDeposit =
       appealCost.add(
-        appealCost.mul(winnerStakeMultiplier)
+        appealCost.mul(winnerStakeMultiplier).div(multiplierDivisor)
       )
-      .div(multiplierDivisor)
+
     const totalLoserAppealDeposit =
       appealCost.add(
-        appealCost.mul(loserStakeMultiplier)
+        appealCost.mul(loserStakeMultiplier).div(multiplierDivisor)
       )
-    .div(multiplierDivisor)
 
     await gtcr.fundAppeal(
       itemID,
       PartyCodes.Requester,
       { from: submitter, value: totalWinnerAppealDeposit }
     )
+
     await gtcr.fundAppeal(
       itemID,
       PartyCodes.Challenger,
       { from: submitter, value: totalLoserAppealDeposit }
     )
+
+    await centralizedArbitrator.giveRuling(0, RulingCodes.Accept, { from: submitter })
+    increaseTime(4 * 60) // Appeal period is 3 minutes long.
+
+    await centralizedArbitrator.executeRuling(0, { from: submitter })
   })
 })
