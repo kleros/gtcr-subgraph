@@ -340,11 +340,32 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
     BigInt.fromI32(1)
   )
 
-  let clearingMetaEvidence = MetaEvidence.load(
+  if (registry.metaEvidenceCount.equals(BigInt.fromI32(2))) {
+    let clearingMetaEvidence = MetaEvidence.load(
+      registry.id + '-' + registry.metaEvidenceCount.toString()
+    )
+    clearingMetaEvidence.URI = event.params._evidence
+    clearingMetaEvidence.save()
+
+    registry.save()
+    return
+  }
+
+  let metaEvidence = new MetaEvidence(
     registry.id + '-' + registry.metaEvidenceCount.toString()
   )
-  clearingMetaEvidence.URI = event.params._evidence
-  clearingMetaEvidence.save()
+  metaEvidence.URI = event.params._evidence
+  metaEvidence.save()
+
+  if (
+    registry.metaEvidenceCount
+      .mod(BigInt.fromI32(2))
+      .equals(BigInt.fromI32(1))
+  ) {
+    registry.registrationMetaEvidence = metaEvidence.id;
+  } else {
+    registry.clearingMetaEvidence = metaEvidence.id;
+  }
 
   registry.save()
 }

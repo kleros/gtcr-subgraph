@@ -183,8 +183,8 @@ const removalBaseDeposit = BigNumber.from(0)
 const removalChallengeBaseDeposit = BigNumber.from(0)
 const arbitratorExtraData = "0x00"
 const challengePeriodDuration = 10
-const registrationMetaEvidence = 'registrationMetaEvidence'
-const clearingMetaEvidence = 'clearingMetaEvidence'
+const registrationMetaEvidence = '/ipfs/Qwp.../registrationMetaEvidence'
+const clearingMetaEvidence = '/ipfs/Qwp.../clearingMetaEvidence'
 
 describe('GTCR subgraph', function () {
   let centralizedArbitrator
@@ -472,5 +472,38 @@ describe('GTCR subgraph', function () {
 
     await waitForGraphSync()
     expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
+  })
+
+  it('updates meta evidence', async function () {
+    const newRegistrationMetaEvidence = 'newRegistrationMetaEvidence'
+    const newClearingMetaEvidence = 'newClearingMetaEvidence'
+    await gtcr.changeMetaEvidence(newRegistrationMetaEvidence, newClearingMetaEvidence, { from: submitter })
+
+    await waitForGraphSync()
+    const response = (await querySubgraph(`{
+      registry(id: "${gtcr.address.toLowerCase()}") {
+        registrationMetaEvidence {
+          id
+          URI
+        }
+        clearingMetaEvidence {
+          id
+          URI
+        }
+        metaEvidenceCount
+      }
+    }`))
+
+    expect(response.registry).to.deep.equal({
+      registrationMetaEvidence: {
+        URI: newRegistrationMetaEvidence,
+        id: `${gtcr.address.toLowerCase()}-3`
+      },
+      clearingMetaEvidence: {
+        URI: newClearingMetaEvidence,
+        id: `${gtcr.address.toLowerCase()}-4`
+      },
+      metaEvidenceCount: '4'
+    })
   })
 })
