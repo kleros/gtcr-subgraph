@@ -34,7 +34,7 @@ async function queryGraph (query) {
   return (await axios.post('http://localhost:8000/subgraphs', { query })).data.data
 }
 
-const subgraphName = 'kleros/gtcr'
+const subgraphName = 'kleros/curate'
 
 async function querySubgraph (query) {
   return (await axios.post(`http://localhost:8000/subgraphs/name/${subgraphName}`, { query })).data.data

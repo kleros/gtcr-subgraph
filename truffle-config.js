@@ -1,4 +1,4 @@
-const seed = process.env.SEED || 'home vapor crisp idea clock oblige frozen bubble rare law risk torch';
+require('dotenv-safe').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 
 const networks = Object.assign(...[
@@ -12,7 +12,7 @@ const networks = Object.assign(...[
     network_id: networkId,
     gasPrice,
     provider: () => new HDWalletProvider(
-      seed,
+      process.env.SEED,
       `https://${network}.infura.io/v3/${process.env.PROJECT_KEY}`,
     ),
   },

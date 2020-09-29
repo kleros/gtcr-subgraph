@@ -4,10 +4,10 @@
   "description": "Subgraph for Generalized TCR contracts",
   "scripts": {
     "migrate": "truffle migrate --all --reset",
-    "create-local": "graph create --node http://localhost:8020/ kleros/gtcr",
-    "remove-local": "graph remove --node http://localhost:8020/ kleros/gtcr",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 kleros/gtcr",
-    "deploy:mainnet": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ kleros/gtcr",
+    "create-local": "graph create --node http://localhost:8020/ kleros/curate",
+    "remove-local": "graph remove --node http://localhost:8020/ kleros/curate",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 kleros/curate",
+    "deploy:mainnet": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ kleros/curate",
     "fix-schema.ts": "replace-in-file '/(;\\s*if \\()value === null/mg' '$1value === null || value.kind === ValueKind.NULL' generated/schema.ts --isRegex",
     "codegen": "truffle exec render-templates.js && graph codegen && npm run fix-schema.ts",
     "codegen:mainnet": "tnt iN && truffle exec --network=mainnet render-templates.js && graph codegen && npm run fix-schema.ts",
@@ -17,7 +17,7 @@
     "test-fresh-graph": "npm run codegen && wait-on tcp:5001 && npm run deploy-local && npm run test-existing-graph",
     "test-existing-graph": "mocha",
     "test": "npm run bootstrap-test && npm run test-fresh-graph",
-    "publish-graph:mainnet": "npm run codegen && npm run deploy:mainnet",
+    "publish-graph:mainnet": "npm run codegen:mainnet && npm run deploy:mainnet",
     "lint:fix": "npx standard \"test/**/*.js\" --fix"
   },
   "repository": {
@@ -34,9 +34,10 @@
   "devDependencies": {
     "@assemblyscript/loader": "^0.14.11",
     "@assemblyscript/node": "github:AssemblyScript/node",
+    "@gnosis.pm/truffle-nice-tools": "^1.3.1",
     "@graphprotocol/graph-cli": "^0.18.0",
     "@graphprotocol/graph-ts": "^0.18.1",
-    "@kleros/erc-792": "^3.0.0",
+    "@kleros/erc-792": "3.0.0",
     "@kleros/gtcr-encoder": "^1.1.3",
     "@kleros/tcr": "^2.0.0",
     "@truffle/contract": "^4.2.22",
@@ -44,6 +45,7 @@
     "assemblyscript": "^0.14.11",
     "axios": "^0.20.0",
     "delay": "^4.4.0",
+    "dotenv-safe": "^8.2.0",
     "ethers": "^5.0.14",
     "fs-extra": "^9.0.1",
     "mocha": "^8.1.3",
@@ -53,9 +55,7 @@
     "should": "^13.2.3",
     "standardjs": "^1.0.0-alpha",
     "truffle": "^5.1.45",
-    "wait-on": "^5.2.0"
-  },
-  "dependencies": {
+    "wait-on": "^5.2.0",
     "web3": "^1.3.0"
   }
 }
