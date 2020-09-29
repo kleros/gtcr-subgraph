@@ -1,7 +1,15 @@
-import { Bytes, log, BigInt, Address, ByteArray } from '@graphprotocol/graph-ts'
-import { Item, Request, Round } from '../generated/schema'
-import { AppealContribution, Dispute, GeneralizedTCR, HasPaidAppealFee, ItemStatusChange, ItemSubmitted, RequestEvidenceGroupID, RequestSubmitted, Ruling } from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
+import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts'
+import { Item, Request, Round, Registry, MetaEvidence } from '../generated/schema'
 import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator'
+import {
+  AppealContribution,
+  Dispute,
+  GeneralizedTCR,
+  HasPaidAppealFee,
+  ItemStatusChange,
+  RequestEvidenceGroupID,
+  MetaEvidence as MetaEvidenceEvent
+} from '../generated/templates/GeneralizedTCR/GeneralizedTCR'
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -24,11 +32,7 @@ const NONE = "None"
 const ACCEPT = "Accept"
 const REJECT = "Reject"
 
-const REQUESTER = "Requester"
-const CHALLENGER = "Challenger"
-
 const REQUESTER_CODE = 1
-const CHALLENGER_CODE = 2
 
 function getStatus(status: number): string {
   if (status == 0) return ABSENT
@@ -58,11 +62,11 @@ function buildNewRound(roundID: string): Round {
 let ZERO_ADDRESS =
   Bytes.fromHexString("0x0000000000000000000000000000000000000000") as Bytes
 
-export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
+export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   let tcr = GeneralizedTCR.bind(event.address)
   let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
-  let itemInfo = tcr.getItemInfo(event.params._itemID)
 
+  let itemInfo = tcr.getItemInfo(event.params._itemID)
   let item = Item.load(graphItemID)
   if (item == null) {
     item = new Item(graphItemID)
@@ -86,11 +90,6 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
   request.challenger = ZERO_ADDRESS
   request.requester = event.transaction.from
 
-  let metaEvidenceID = BigInt.fromI32(2).times(tcr.metaEvidenceUpdates())
-  if (request.requestType == CLEARING_REQUESTED) {
-    metaEvidenceID = metaEvidenceID.plus(BigInt.fromI32(1))
-  }
-  request.metaEvidenceID = metaEvidenceID
   request.disputeOutcome = NONE
   request.resolved = false
   request.disputeID = 0
@@ -102,17 +101,20 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void{
   let roundID = requestID + '-0'
   let round = new Round(roundID)
 
+  let registry = Registry.load(event.address.toHexString())
   let arbitrator = IArbitrator.bind(request.arbitrator as Address)
   if (request.requestType == REGISTRATION_REQUESTED) {
     round.amountPaidRequester = tcr.submissionBaseDeposit()
       .plus(
         arbitrator.arbitrationCost(request.arbitratorExtraData)
       )
+    request.metaEvidence = registry.registrationMetaEvidence
   } else {
     round.amountPaidRequester = tcr.removalBaseDeposit()
       .plus(
         arbitrator.arbitrationCost(request.arbitratorExtraData)
       )
+    request.metaEvidence = registry.clearingMetaEvidence
   }
 
   round.feeRewards = round.amountPaidRequester
@@ -229,7 +231,6 @@ export function handleRequestChallenged(event: Dispute): void {
 }
 
 export function handleAppealContribution(event: AppealContribution): void {
-  let tcr = GeneralizedTCR.bind(event.address)
   let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString()
   let item = Item.load(graphItemID)
   if (item == null) {
@@ -271,7 +272,6 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     return
   }
 
-  let itemInfo = tcr.getItemInfo(event.params._itemID)
   let requestID = graphItemID + '-' +
     event.params._request.toString()
 
@@ -308,4 +308,43 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
   }
 
   round.save()
+}
+
+export function handleMetaEvidence(event: MetaEvidenceEvent): void {
+  let registry = Registry.load(event.address.toHexString())
+
+  if (registry == null) {
+    registry = new Registry(event.address.toHexString())
+    registry.metaEvidenceCount = BigInt.fromI32(1)
+
+    let registrationMetaEvidence = new MetaEvidence(
+      registry.id + '-1'
+    )
+    registrationMetaEvidence.URI = event.params._evidence
+    registrationMetaEvidence.save()
+
+    let clearingMetaEvidence = new MetaEvidence(
+      registry.id + '-2'
+    )
+    clearingMetaEvidence.URI = ''
+    clearingMetaEvidence.save()
+
+    registry.registrationMetaEvidence = registrationMetaEvidence.id
+    registry.clearingMetaEvidence = clearingMetaEvidence.id
+    registry.save()
+
+    return
+  }
+
+  registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
+    BigInt.fromI32(1)
+  )
+
+  let clearingMetaEvidence = MetaEvidence.load(
+    registry.id + '-' + registry.metaEvidenceCount.toString()
+  )
+  clearingMetaEvidence.URI = event.params._evidence
+  clearingMetaEvidence.save()
+
+  registry.save()
 }

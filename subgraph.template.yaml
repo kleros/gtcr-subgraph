@@ -54,6 +54,8 @@ templates:
           handler: handleAppealContribution
         - event: HasPaidAppealFee(indexed bytes32,indexed uint256,indexed uint256,uint8)
           handler: handleHasPaidAppealFee
+        - event: MetaEvidence(indexed uint256,string)
+          handler: handleMetaEvidence
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator

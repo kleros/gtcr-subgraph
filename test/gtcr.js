@@ -122,7 +122,6 @@ function buildFullItemQuery (itemID) {
         arbitratorExtraData
         challenger
         requester
-        metaEvidenceID
         disputeOutcome
         resolved
         disputeID
@@ -130,6 +129,10 @@ function buildFullItemQuery (itemID) {
         evidenceGroupID
         numberOfRounds
         requestType
+        metaEvidence {
+          id
+          URI
+        }
         rounds {
           id
           amountPaidRequester
@@ -180,6 +183,8 @@ const removalBaseDeposit = BigNumber.from(0)
 const removalChallengeBaseDeposit = BigNumber.from(0)
 const arbitratorExtraData = "0x00"
 const challengePeriodDuration = 10
+const registrationMetaEvidence = 'registrationMetaEvidence'
+const clearingMetaEvidence = 'clearingMetaEvidence'
 
 describe('GTCR subgraph', function () {
   let centralizedArbitrator
@@ -204,8 +209,8 @@ describe('GTCR subgraph', function () {
       centralizedArbitrator.address, // Arbitrator to resolve potential disputes. The arbitrator is trusted to support appeal periods and not reenter.
       arbitratorExtraData,// Extra data for the trusted arbitrator contract.
       accounts[0], // Connected TCR is not used (any address here works for this test). // The address of the TCR that stores related TCR addresses. This parameter can be left empty.
-      '', // The URI of the meta evidence object for registration requests.
-      '', // The URI of the meta evidence object for clearing requests.
+      registrationMetaEvidence, // The URI of the meta evidence object for registration requests.
+      clearingMetaEvidence, // The URI of the meta evidence object for clearing requests.
       accounts[0], // The trusted governor of this contract.
       submissionBaseDeposit, // The base deposit to submit an item.
       removalBaseDeposit, // The base deposit to remove an item.
@@ -232,7 +237,9 @@ describe('GTCR subgraph', function () {
       arbitratorExtraData: arbitratorExtraData,
       challenger: '0x0000000000000000000000000000000000000000',
       requester: submitter.toLowerCase(),
-      metaEvidenceID: "0",
+      metaEvidence: {
+        URI: registrationMetaEvidence
+      },
       disputeOutcome: Ruling.None,
       resolved: false,
       disputeID: 0,
@@ -241,7 +248,7 @@ describe('GTCR subgraph', function () {
     }
   })
 
-  step('subgraph exists', async function () {
+  it('subgraph exists', async function () {
     const { subgraphs } = await queryGraph(`{
       subgraphs(first: 1, where: {name: "${subgraphName}"}) {
         id
@@ -264,7 +271,7 @@ describe('GTCR subgraph', function () {
   let baseRound
   let baseRequest
 
-  step('add item', async function () {
+  it('add item', async function () {
     const columns = [
       {
         label: 'Name',
@@ -294,7 +301,6 @@ describe('GTCR subgraph', function () {
     const [,,evidenceGroupID] = log.args
     const { timestamp } = await ethersProvider.getBlock(log.blockNumber)
 
-
     await advanceBlock()
     await waitForGraphSync()
     itemState = {
@@ -315,7 +321,11 @@ describe('GTCR subgraph', function () {
               amountPaidRequester: submissionDeposit.toString(),
               feeRewards: submissionDeposit.toString(),
             }
-          ]
+          ],
+          metaEvidence: {
+            ...baseRequest.metaEvidence,
+            id: gtcr.address.toLowerCase() + '-1'
+          }
         }
       ]
     }
@@ -329,7 +339,7 @@ describe('GTCR subgraph', function () {
     expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 
-  step('challenge removal request', async function () {
+  it('challenge removal request', async function () {
     removalDeposit = arbitrationCost.add(removalBaseDeposit)
     await gtcr.removeItem(itemID, '/ipfs/Qw...', { from: submitter, value: removalDeposit.toString() })
     const log = (await ethersProvider.getLogs({
@@ -353,7 +363,11 @@ describe('GTCR subgraph', function () {
         amountPaidRequester: removalDeposit.toString(),
         id: `${graphItemID}-1-0`,
         feeRewards: removalDeposit.toString()
-      }]
+      }],
+      metaEvidence: {
+        id: gtcr.address.toLowerCase() + '-2',
+        URI: clearingMetaEvidence
+      }
     })
 
     increaseTime(challengePeriodDuration/2)
@@ -381,7 +395,7 @@ describe('GTCR subgraph', function () {
     expect((await querySubgraph(buildFullItemQuery(graphItemID))).item).to.deep.equal(itemState)
   })
 
-  step('funding and raising appeal', async function () {
+  it('funding and raising appeal', async function () {
     await centralizedArbitrator.giveRuling(0, RulingCodes.Accept, { from: submitter })
 
     const [
