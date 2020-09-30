@@ -108,10 +108,11 @@ function advanceBlock () {
   })
 }
 
-function buildFullItemQuery (itemID) {
+function buildFullItemQuery (graphItemID) {
   return `{
-    item(id: "${itemID}") {
+    item(id: "${graphItemID}") {
       id
+      itemID
       data
       status
       numberOfRequests
@@ -157,12 +158,6 @@ const Ruling = {
   None: 'None',
   Accept: 'Accept',
   Reject: 'Reject',
-}
-
-const Party = {
-  None: 'None',
-  Requester: 'Requester',
-  Challenger: 'Challenger',
 }
 
 const RulingCodes = {
@@ -304,6 +299,7 @@ describe('GTCR subgraph', function () {
     await advanceBlock()
     await waitForGraphSync()
     itemState = {
+      itemID,
       id: graphItemID,
       data: encodedData,
       status: Status.RegistrationRequested,
