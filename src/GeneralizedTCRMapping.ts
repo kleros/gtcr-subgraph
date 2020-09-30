@@ -301,47 +301,19 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   let registry = Registry.load(event.address.toHexString())
 
-  if (registry == null) {
-    registry = new Registry(event.address.toHexString())
-    registry.metaEvidenceCount = BigInt.fromI32(1)
-
-    let registrationMetaEvidence = new MetaEvidence(
-      registry.id + '-1'
-    )
-    registrationMetaEvidence.URI = event.params._evidence
-    registrationMetaEvidence.save()
-
-    let clearingMetaEvidence = new MetaEvidence(
-      registry.id + '-2'
-    )
-    clearingMetaEvidence.URI = ''
-    clearingMetaEvidence.save()
-
-    registry.registrationMetaEvidence = registrationMetaEvidence.id
-    registry.clearingMetaEvidence = clearingMetaEvidence.id
-    registry.save()
-
-    return
-  }
-
   registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
     BigInt.fromI32(1)
   )
 
-  if (registry.metaEvidenceCount.equals(BigInt.fromI32(2))) {
-    let clearingMetaEvidence = MetaEvidence.load(
-      registry.id + '-' + registry.metaEvidenceCount.toString()
-    )
-    clearingMetaEvidence.URI = event.params._evidence
-    clearingMetaEvidence.save()
-
-    registry.save()
-    return
-  }
-
-  let metaEvidence = new MetaEvidence(
+  let metaEvidence = MetaEvidence.load(
     registry.id + '-' + registry.metaEvidenceCount.toString()
   )
+  if (metaEvidence == null) {
+    metaEvidence = new MetaEvidence(
+      registry.id + '-' + registry.metaEvidenceCount.toString()
+    )
+  }
+
   metaEvidence.URI = event.params._evidence
   metaEvidence.save()
 
