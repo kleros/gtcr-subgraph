@@ -27,6 +27,8 @@ type Registry @entity {
   clearingMetaEvidence: MetaEvidence!
   "The number of MetaEvidence event logs emitted."
   metaEvidenceCount: BigInt!
+  "The items submitted to this list"
+  items: [Item!]! @derivedFrom(field: "registry")
 }
 
 type MetaEvidence @entity {
@@ -37,15 +39,20 @@ type MetaEvidence @entity {
 }
 
 type Item @entity {
+  "The id of the item in the subgraph entity. Format: <listaddress>@<itemID>"
   id: ID!
+  "The ID of the item in the registry. Also the keccak256 hash of the data."
+  itemID: Bytes!
   "The data describing the item."
   data: Bytes!
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
-  requests: [Request!]!
+  requests: [Request!]! @derivedFrom(field: "item")
   "The total number of requests for this item."
   numberOfRequests: Int!
+  "The registry where this item was submitted."
+  registry: Registry!
 }
 
 type Request @entity {
@@ -70,14 +77,17 @@ type Request @entity {
   "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."
   disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
-  rounds: [Round!]!
+  rounds: [Round!]! @derivedFrom(field: "request")
   "The ID of the evidence group for this request."
   evidenceGroupID: BigInt!
   "The total number of rounds on this request."
   numberOfRounds: Int!
   "Whether it was requested to add or remove the item to/from the list."
   requestType: Status!
+  "The URI to the meta evidence used for this request."
   metaEvidence: MetaEvidence!
+  "The item this request belongs to."
+  item: Item!
 }
 
 type Round @entity {
@@ -92,4 +102,6 @@ type Round @entity {
   hasPaidChallenger: Boolean!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
+  "The request to which this round belongs."
+  request: Request!
 }

@@ -49,13 +49,14 @@ function getFinalRuling(outcome: number): string {
   return "Error"
 }
 
-function buildNewRound(roundID: string): Round {
+function buildNewRound(roundID: string, requestId: string): Round {
   let newRound = new Round(roundID)
   newRound.amountPaidRequester = BigInt.fromI32(0)
   newRound.amountPaidChallenger = BigInt.fromI32(0)
   newRound.feeRewards = BigInt.fromI32(0)
   newRound.hasPaidRequester = false
   newRound.hasPaidChallenger = false
+  newRound.request = requestId
   return newRound
 }
 
@@ -68,11 +69,13 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
 
   let itemInfo = tcr.getItemInfo(event.params._itemID)
   let item = Item.load(graphItemID)
+  let registry = Registry.load(event.address.toHexString())
   if (item == null) {
     item = new Item(graphItemID)
+    item.itemID = event.params._itemID
     item.data = itemInfo.value0
     item.numberOfRequests = 1
-    item.requests = []
+    item.registry = registry.id
   } else {
     item.numberOfRequests++
   }
@@ -89,6 +92,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.arbitratorExtraData = tcr.arbitratorExtraData()
   request.challenger = ZERO_ADDRESS
   request.requester = event.transaction.from
+  request.item = item.id
 
   request.disputeOutcome = NONE
   request.resolved = false
@@ -101,7 +105,6 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   let roundID = requestID + '-0'
   let round = new Round(roundID)
 
-  let registry = Registry.load(event.address.toHexString())
   let arbitrator = IArbitrator.bind(request.arbitrator as Address)
   if (request.requestType == REGISTRATION_REQUESTED) {
     round.amountPaidRequester = tcr.submissionBaseDeposit()
@@ -121,17 +124,9 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.amountPaidChallenger = BigInt.fromI32(0)
   round.hasPaidRequester = true
   round.hasPaidChallenger = false
+  round.request = request.id
   round.save()
-
-  request.rounds =[round.id]
   request.save()
-
-  // Cannot push to item.requests directly so we use
-  // a temporary variable.
-  let itemRequests = item.requests
-  itemRequests.push(request.id)
-  item.requests = itemRequests
-
   item.save()
 }
 
@@ -221,12 +216,8 @@ export function handleRequestChallenged(event: Dispute): void {
   round.save()
 
   let newRoundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
-  let newRound = buildNewRound(newRoundID)
+  let newRound = buildNewRound(newRoundID, request.id)
   newRound.save()
-
-  let rounds = request.rounds
-  rounds.push(newRound.id)
-  request.rounds = rounds
   request.save()
 }
 
@@ -297,11 +288,8 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     )
     round.feeRewards = round.feeRewards.minus(appealCost)
     let newRoundID = requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString()
-    let newRound = buildNewRound(newRoundID)
+    let newRound = buildNewRound(newRoundID, request.id)
     newRound.save()
-    let rounds = request.rounds
-    rounds.push(newRoundID)
-    request.rounds = rounds
 
     request.numberOfRounds = request.numberOfRounds + 1
     request.save()
