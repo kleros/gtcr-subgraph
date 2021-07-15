@@ -70,4 +70,9 @@ templates:
       abis:
         - name: IArbitrator
           file: ./abis/IArbitrator.json
-      file: ./src/utils/empty.ts
+        - name: GeneralizedTCR
+          file: ./abis/GeneralizedTCR.json
+      eventHandlers:
+        - event: AppealPossible(indexed uint256,indexed address)
+          handler: handleAppealPossible
+      file: ./src/GeneralizedTCRMapping.ts

@@ -6,8 +6,10 @@ import {
   Round,
   Registry,
   MetaEvidence,
+  Arbitrator,
 } from '../generated/schema';
-import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator';
+import { AppealPossible, IArbitrator } from '../generated/templates/IArbitrator/IArbitrator';
+import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates'
 import {
   AppealContribution,
   Dispute,
@@ -63,6 +65,10 @@ function buildNewRound(roundID: string, requestId: string): Round {
   newRound.hasPaidRequester = false;
   newRound.hasPaidChallenger = false;
   newRound.request = requestId;
+  newRound.appealPeriodStart = BigInt.fromI32(0);
+  newRound.appealPeriodEnd = BigInt.fromI32(0);
+  newRound.rulingTime = BigInt.fromI32(0);
+  newRound.ruling = NONE;
   return newRound;
 }
 
@@ -82,12 +88,12 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
     item = new Item(graphItemID);
     item.itemID = event.params._itemID;
     item.data = itemInfo.value0;
-    item.numberOfRequests = 1;
+    item.numberOfRequests = BigInt.fromI32(1);
     item.registry = registry.id;
     item.disputed = false;
     registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
   } else {
-    item.numberOfRequests++;
+    item.numberOfRequests = item.numberOfRequests.plus(BigInt.fromI32(1));
   }
   item.status = getStatus(itemInfo.value1);
   item.latestRequester = event.transaction.from;
@@ -110,9 +116,9 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
 
   request.disputeOutcome = NONE;
   request.resolved = false;
-  request.disputeID = 0;
+  request.disputeID = BigInt.fromI32(0);
   request.submissionTime = event.block.timestamp;
-  request.numberOfRounds = 1;
+  request.numberOfRounds = BigInt.fromI32(1);
   request.requestType = item.status;
   request.evidenceGroupID = event.params._evidenceGroupID;
 
@@ -137,6 +143,10 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.hasPaidRequester = true;
   round.hasPaidChallenger = false;
   round.request = request.id;
+  round.appealPeriodStart = BigInt.fromI32(0);
+  round.appealPeriodEnd = BigInt.fromI32(0);
+  round.rulingTime = BigInt.fromI32(0);
+  round.ruling = NONE;
   round.save();
   request.save();
   item.save();
@@ -198,7 +208,8 @@ export function handleRequestChallenged(event: Dispute): void {
   let request = Request.load(requestID);
   request.disputed = true;
   request.challenger = event.transaction.from;
-  request.numberOfRounds = 2;    
+  request.numberOfRounds = BigInt.fromI32(2);    
+  request.disputeID = event.params._disputeID;
 
   let requestInfo = tcr.getRequestInfo(
     itemID,
@@ -299,7 +310,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     );
     let arbitrator = IArbitrator.bind(request.arbitrator as Address);
     let appealCost = arbitrator.appealCost(
-      BigInt.fromI32(request.disputeID),
+      request.disputeID,
       request.arbitratorExtraData,
     );
     round.feeRewards = round.feeRewards.minus(appealCost);
@@ -308,7 +319,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     let newRound = buildNewRound(newRoundID, request.id);
     newRound.save();
 
-    request.numberOfRounds = request.numberOfRounds + 1;
+    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
     request.save();
   }
 
@@ -321,6 +332,21 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
     BigInt.fromI32(1),
   );
+
+  if (registry.metaEvidenceCount.equals(BigInt.fromI32(1))) {
+    // This means this is the first meta evidence event emitted,
+    // in the constructor.
+    // Use this opportunity to create the arbitrator datasource 
+    // to start monitoring it for events (if we aren't already).
+    let tcr = GeneralizedTCR.bind(event.address);    
+    let arbitratorAddr = tcr.arbitrator()
+    let arbitrator = Arbitrator.load(arbitratorAddr.toHexString());
+    if (arbitrator) return // Data source already created.
+
+    IArbitratorDataSourceTemplate.create(arbitratorAddr);
+    arbitrator = new Arbitrator(arbitratorAddr.toHexString());
+    arbitrator.save();
+  }
 
   let metaEvidence = MetaEvidence.load(
     registry.id + '-' + registry.metaEvidenceCount.toString(),
@@ -343,4 +369,45 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   }
 
   registry.save();
+}
+
+export function handleAppealPossible(event: AppealPossible): void {
+  let registry = Registry.load(event.params._arbitrable.toHexString());
+  if (registry == null) return; // Event not related to a GTCR.  
+
+  let tcr = GeneralizedTCR.bind(event.params._arbitrable);
+  let itemID = tcr.arbitratorDisputeIDToItem(
+    event.address,
+    event.params._disputeID
+  );
+  let graphItemID =
+    itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
+  let item = Item.load(graphItemID);
+  
+  let request = Request.load(
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+  );
+
+  let round = Round.load(
+    request.id +
+      '-' +
+      request.numberOfRounds.minus(BigInt.fromI32(1)).toString()
+  );
+
+  let arbitrator = IArbitrator.bind(event.address);
+  let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);
+  round.appealPeriodStart = appealPeriod.value0;
+  round.appealPeriodEnd = appealPeriod.value1;
+  round.rulingTime = event.block.timestamp;
+
+  let currentRuling = arbitrator.currentRuling(request.disputeID);
+  round.ruling =
+    currentRuling.equals(BigInt.fromI32(0))
+      ? NONE
+      : currentRuling.equals(BigInt.fromI32(1))
+      ? ACCEPT
+      : REJECT;
+
+  item.save();
+  round.save();
 }

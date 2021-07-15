@@ -18,6 +18,11 @@ enum Ruling {
   Reject
 }
 
+type Arbitrator @entity {
+  "The address of the arbitrator"
+  id: ID!
+}
+
 type Registry @entity {
   "The registry address"
   id: ID!
@@ -54,7 +59,7 @@ type Item @entity {
   "List of status change requests made for the item in the form requests[requestID]."
   requests: [Request!]! @derivedFrom(field: "item")
   "The total number of requests for this item."
-  numberOfRequests: Int!
+  numberOfRequests: BigInt!
   "The registry where this item was submitted."
   registry: Registry!
   "Time when the latest request was made."
@@ -75,7 +80,7 @@ type Request @entity {
   "True if a dispute was raised."
   disputed: Boolean!
   "ID of the dispute, if any."
-  disputeID: Int!
+  disputeID: BigInt!
   "Time when the request was made. Used to track when the challenge period ends."
   submissionTime: BigInt!
   "True if the request was executed and/or any raised disputes were resolved."
@@ -95,7 +100,7 @@ type Request @entity {
   "The ID of the evidence group for this request."
   evidenceGroupID: BigInt!
   "The total number of rounds on this request."
-  numberOfRounds: Int!
+  numberOfRounds: BigInt!
   "Whether it was requested to add or remove the item to/from the list."
   requestType: Status!
   "The URI to the meta evidence used for this request."
@@ -122,4 +127,12 @@ type Round @entity {
   feeRewards: BigInt!
   "The request to which this round belongs."
   request: Request!
+  "The time the appeal period starts, if in the appeal period."
+  appealPeriodStart: BigInt!
+  "The time the appeal period ends, if in the appeal period."
+  appealPeriodEnd: BigInt!
+  "The time the round received the ruling."
+  rulingTime: BigInt!
+  "The ruling given by the arbitrator."
+  ruling: Ruling!
 }
