@@ -29,6 +29,8 @@ type Registry @entity {
   metaEvidenceCount: BigInt!
   "The items submitted to this list"
   items: [Item!]! @derivedFrom(field: "registry")
+  "The requests submitted to this list"
+  requests: [Request!]! @derivedFrom(field: "registry")
 }
 
 type MetaEvidence @entity {
@@ -53,6 +55,10 @@ type Item @entity {
   numberOfRequests: Int!
   "The registry where this item was submitted."
   registry: Registry!
+  "Time when the latest request was made."
+  latestRequestSubmissionTime: BigInt!
+  "The time the latest request was resolved."
+  latestRequestResolutionTime: BigInt!
 }
 
 type Request @entity {
@@ -88,6 +94,10 @@ type Request @entity {
   metaEvidence: MetaEvidence!
   "The item this request belongs to."
   item: Item!
+  "The registry where this request was submitted."
+  registry: Registry!
+  "The time the request was resolved."
+  resolutionTime: BigInt!
 }
 
 type Round @entity {
