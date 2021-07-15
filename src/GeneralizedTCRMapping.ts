@@ -84,10 +84,14 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
     item.data = itemInfo.value0;
     item.numberOfRequests = 1;
     item.registry = registry.id;
+    item.disputed = false;
+    registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
   } else {
     item.numberOfRequests++;
   }
   item.status = getStatus(itemInfo.value1);
+  item.latestRequester = event.transaction.from;
+  item.latestChallenger = ZERO_ADDRESS;
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = event.block.timestamp;
 
@@ -159,6 +163,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
 
   item.status = getStatus(itemInfo.value1);
   item.latestRequestResolutionTime = event.block.timestamp;
+  item.disputed = false;
   item.save();
 
   let requestInfo = tcr.getRequestInfo(
@@ -169,14 +174,6 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   let request = Request.load(
     graphItemID + '-' + event.params._requestIndex.toString(),
   );
-  if (request == null) {
-    log.error('GTCR: Request {} of item {} of TCR {} not found. Bailing.', [
-      event.params._requestIndex.toString(),
-      event.params._itemID.toHexString(),
-      tcrAddress,
-    ]);
-    return;
-  }
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
@@ -191,20 +188,17 @@ export function handleRequestChallenged(event: Dispute): void {
     event.params._disputeID,
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);
-  if (item == null) {
-    log.error('GTCR: Item {} not found. Bailing handleRequestResolved.', [
-      graphItemID,
-    ]);
-    return;
-  }
+  let item = Item.load(graphItemID);  
+  item.disputed = true;
+  item.latestChallenger = event.transaction.from;
 
   let itemInfo = tcr.getItemInfo(itemID);
   let requestID =
     graphItemID + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString();
   let request = Request.load(requestID);
   request.disputed = true;
-  request.numberOfRounds = 2;
+  request.challenger = event.transaction.from;
+  request.numberOfRounds = 2;    
 
   let requestInfo = tcr.getRequestInfo(
     itemID,

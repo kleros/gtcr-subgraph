@@ -31,6 +31,8 @@ type Registry @entity {
   items: [Item!]! @derivedFrom(field: "registry")
   "The requests submitted to this list"
   requests: [Request!]! @derivedFrom(field: "registry")
+  "The number of items submitted to the list."
+  numberOfItems: BigInt!
 }
 
 type MetaEvidence @entity {
@@ -59,6 +61,12 @@ type Item @entity {
   latestRequestSubmissionTime: BigInt!
   "The time the latest request was resolved."
   latestRequestResolutionTime: BigInt!
+  "Whether the item is currently disputed."
+  disputed: Boolean!
+  "The account that made the latest request to the item."
+  latestRequester: Bytes!
+  "The account that challenged the latest request, if any."
+  latestChallenger: Bytes!
 }
 
 type Request @entity {
