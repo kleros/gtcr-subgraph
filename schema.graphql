@@ -135,4 +135,6 @@ type Round @entity {
   rulingTime: BigInt!
   "The ruling given by the arbitrator."
   ruling: Ruling!
+  "The moment the round was created."
+  creationTime: BigInt!
 }

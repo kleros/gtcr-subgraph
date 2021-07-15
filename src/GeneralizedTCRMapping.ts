@@ -57,7 +57,7 @@ function getFinalRuling(outcome: number): string {
   return 'Error';
 }
 
-function buildNewRound(roundID: string, requestId: string): Round {
+function buildNewRound(roundID: string, requestId: string, timestamp: BigInt): Round {
   let newRound = new Round(roundID);
   newRound.amountPaidRequester = BigInt.fromI32(0);
   newRound.amountPaidChallenger = BigInt.fromI32(0);
@@ -69,6 +69,7 @@ function buildNewRound(roundID: string, requestId: string): Round {
   newRound.appealPeriodEnd = BigInt.fromI32(0);
   newRound.rulingTime = BigInt.fromI32(0);
   newRound.ruling = NONE;
+  newRound.creationTime = timestamp;
   return newRound;
 }
 
@@ -147,6 +148,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.appealPeriodEnd = BigInt.fromI32(0);
   round.rulingTime = BigInt.fromI32(0);
   round.ruling = NONE;
+  round.creationTime = event.block.timestamp;
   round.save();
   request.save();
   item.save();
@@ -237,7 +239,7 @@ export function handleRequestChallenged(event: Dispute): void {
 
   let newRoundID =
     requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
-  let newRound = buildNewRound(newRoundID, request.id);
+  let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
   newRound.save();
   request.save();
 }
@@ -316,7 +318,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     round.feeRewards = round.feeRewards.minus(appealCost);
     let newRoundID =
       requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
-    let newRound = buildNewRound(newRoundID, request.id);
+    let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);    
     newRound.save();
 
     request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
