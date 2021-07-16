@@ -8,17 +8,3 @@
 </p>
 
 This repo defines a subgraph which is used by Curate.
-
-The `docker-compose.yml` contains a Docker Compose configuration suitable for spinning up a test environment.
-
-## Testing
-
-If running for the first time (i.e. there aren't any previous containers you want to remove), use:
-
-`docker-compose down && docker-compose up -d && yarn test`.
-
-After that, to teardown and run the tests again:
-
-`docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker-compose down && docker-compose up -d && yarn test`
-
-> Note: You'll probably need sudo to run those commands.
