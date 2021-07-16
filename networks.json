@@ -2,15 +2,23 @@
   "GTCRFactory": {
     "1": {
       "address": "0xe9dd523600b74b8ef0af164687079a6c437f9cd5",
-      "transactionHash": "0xe31665d2ecefec363cc6ee16353ac1ddaa36fe1561c04fe535c6afd8cad088c2"
+      "transactionHash": "0xe31665d2ecefec363cc6ee16353ac1ddaa36fe1561c04fe535c6afd8cad088c2",
+      "startBlock": 10247117
     },
     "42": {
       "address": "0x4296b39059b8591d4f22a0fc4ee49508279b8fc6",
-      "transactionHash": "0x3a16b4df1e10db8a962d0a74ec4acdfe4bbf38f620f4cc25b51d588dcc6e6446"
+      "transactionHash": "0x3a16b4df1e10db8a962d0a74ec4acdfe4bbf38f620f4cc25b51d588dcc6e6446",
+      "startBlock": 18495616
     },
     "4": {
       "address": "0xcc1f0ca49a9d622da624bff6a4cd5b32c5276b11",
-      "transactionHash": "0x26667317945f52e2b7e87bc6a621afcfa45f247cdce6f00bbf7a4ce14809ecc0"
+      "transactionHash": "0x26667317945f52e2b7e87bc6a621afcfa45f247cdce6f00bbf7a4ce14809ecc0",
+      "startBlock": 6976939
+    },
+    "100": {
+      "address": "0x794Cee5a6e1501b633eC13b8c1e327d9860FE039",
+      "transactionHash": "0x4b130acc03a56e3d5044b3dde7c09292393b7e2cca39db71689469473596583e",
+      "startBlock": 16969180
     }
   }
 }
