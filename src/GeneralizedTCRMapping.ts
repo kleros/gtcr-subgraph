@@ -165,74 +165,6 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   item.save();
 }
 
-export function handleRequestChallenged(event: Dispute): void {
-  let tcr = GeneralizedTCR.bind(event.address);
-  let itemID = tcr.arbitratorDisputeIDToItemID(
-    event.params._arbitrator,
-    event.params._disputeID,
-  );
-  let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);
-  item.disputed = true;
-  item.latestChallenger = event.transaction.from;
-
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestID =
-    graphItemID + '-' + requestIndex.toString();
-  let request = Request.load(requestID);
-  request.disputed = true;
-  request.challenger = event.transaction.from;
-  request.numberOfRounds = BigInt.fromI32(2);
-  request.disputeID = event.params._disputeID;
-
-  let newRoundID =
-    requestID + '-' + requestIndex.toString();
-  let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
-  newRound.save();
-  request.save();
-  item.save()
-}
-
-export function handleRequestResolved(event: ItemStatusChange): void {
-  let tcr = GeneralizedTCR.bind(event.address);
-  let itemInfo = tcr.getItemInfo(event.params._itemID);
-  if (itemInfo.value0 == 2 || itemInfo.value0 == 3)
-    return // Request is not resolved yet. No-op.
-
-  let graphItemID =
-    event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let tcrAddress = event.address.toHexString();
-
-  let item = Item.load(graphItemID);
-  if (item == null) {
-    log.error('GTCR: Item {} @ {} not found. Bailing handleRequestResolved.', [
-      event.params._itemID.toHexString(),
-      tcrAddress,
-    ]);
-    return;
-  }
-
-  item.status = getStatus(itemInfo.value0);
-  item.latestRequestResolutionTime = event.block.timestamp;
-  item.disputed = false;
-  item.save();
-
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.getRequestInfo(
-    event.params._itemID,
-    requestIndex,
-  );
-
-  let request = Request.load(
-    graphItemID + '-' + requestIndex.toString()
-  );
-  request.resolved = true;
-  request.resolutionTime = event.block.timestamp;
-  request.disputeOutcome = getFinalRuling(requestInfo.value6);
-
-  request.save();
-}
-
 export function handleContribution(event: Contribution): void {
   // This handler is triggered in 3 situations:
   // - When a user places a request
@@ -315,6 +247,34 @@ export function handleContribution(event: Contribution): void {
   round.save();
 }
 
+export function handleRequestChallenged(event: Dispute): void {
+  let tcr = GeneralizedTCR.bind(event.address);
+  let itemID = tcr.arbitratorDisputeIDToItemID(
+    event.params._arbitrator,
+    event.params._disputeID,
+  );
+  let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
+  let item = Item.load(graphItemID);
+  item.disputed = true;
+  item.latestChallenger = event.transaction.from;
+
+  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestID =
+    graphItemID + '-' + requestIndex.toString();
+  let request = Request.load(requestID);
+  request.disputed = true;
+  request.challenger = event.transaction.from;
+  request.numberOfRounds = BigInt.fromI32(2);
+  request.disputeID = event.params._disputeID;
+
+  let newRoundID =
+    requestID + '-' + requestIndex.toString();
+  let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
+  newRound.save();
+  request.save();
+  item.save()
+}
+
 export function handleAppealPossible(event: AppealPossible): void {
   let registry = Registry.load(event.params._arbitrable.toHexString());
   if (registry == null) return; // Event not related to a GTCR.
@@ -354,6 +314,46 @@ export function handleAppealPossible(event: AppealPossible): void {
 
   item.save();
   round.save();
+}
+
+export function handleRequestResolved(event: ItemStatusChange): void {
+  let tcr = GeneralizedTCR.bind(event.address);
+  let itemInfo = tcr.getItemInfo(event.params._itemID);
+  if (itemInfo.value0 == 2 || itemInfo.value0 == 3)
+    return // Request is not resolved yet. No-op.
+
+  let graphItemID =
+    event.params._itemID.toHexString() + '@' + event.address.toHexString();
+  let tcrAddress = event.address.toHexString();
+
+  let item = Item.load(graphItemID);
+  if (item == null) {
+    log.error('GTCR: Item {} @ {} not found. Bailing handleRequestResolved.', [
+      event.params._itemID.toHexString(),
+      tcrAddress,
+    ]);
+    return;
+  }
+
+  item.status = getStatus(itemInfo.value0);
+  item.latestRequestResolutionTime = event.block.timestamp;
+  item.disputed = false;
+  item.save();
+
+  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(
+    event.params._itemID,
+    requestIndex,
+  );
+
+  let request = Request.load(
+    graphItemID + '-' + requestIndex.toString()
+  );
+  request.resolved = true;
+  request.resolutionTime = event.block.timestamp;
+  request.disputeOutcome = getFinalRuling(requestInfo.value6);
+
+  request.save();
 }
 
 export function handleRewardWithdrawn(event: RewardWithdrawn): void {
