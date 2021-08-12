@@ -46,12 +46,12 @@ templates:
       eventHandlers:
         - event: NewItem(indexed bytes32,string)
           handler: handleNewItem
-        - event: ItemStatusChange(indexed bytes32)
-          handler: handleRequestResolved
         - event: RequestSubmitted(indexed bytes32,uint256)
           handler: handleRequestSubmitted
         - event: Dispute(indexed address,indexed uint256,uint256,uint256)
           handler: handleRequestChallenged
+        - event: ItemStatusChange(indexed bytes32)
+          handler: handleRequestResolved
         - event: Contribution(indexed bytes32,indexed address,uint256,uint8)
           handler: handleContribution
         - event: RewardWithdrawn(indexed address,indexed bytes32,uint256,uint256)

@@ -53,7 +53,7 @@ type Item @entity {
   "The ID of the item in the registry. Also the keccak256 hash of the data."
   itemID: Bytes!
   "The data describing the item."
-  data: Bytes!
+  data: String!
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
