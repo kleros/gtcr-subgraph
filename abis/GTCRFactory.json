@@ -1,5 +1,17 @@
 [
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_GTCR",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -11,6 +23,21 @@
     ],
     "name": "NewGTCR",
     "type": "event"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "GTCR",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "constant": true,
@@ -67,24 +94,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "_submissionBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_removalBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_submissionChallengeBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_removalChallengeBaseDeposit",
-        "type": "uint256"
+        "internalType": "uint256[4]",
+        "name": "_baseDeposits",
+        "type": "uint256[4]"
       },
       {
         "internalType": "uint256",
@@ -95,6 +107,11 @@
         "internalType": "uint256[3]",
         "name": "_stakeMultipliers",
         "type": "uint256[3]"
+      },
+      {
+        "internalType": "address",
+        "name": "_relayContract",
+        "type": "address"
       }
     ],
     "name": "deploy",

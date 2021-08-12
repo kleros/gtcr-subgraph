@@ -1,70 +1,22 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "contract IArbitrator",
-        "name": "_arbitrator",
-        "type": "address"
-      },
-      {
-        "internalType": "bytes",
-        "name": "_arbitratorExtraData",
-        "type": "bytes"
-      },
-      {
-        "internalType": "address",
-        "name": "_connectedTCR",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "_registrationMetaEvidence",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_clearingMetaEvidence",
-        "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "_governor",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_submissionBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_removalBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_submissionChallengeBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_removalChallengeBaseDeposit",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_challengePeriodDuration",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256[3]",
-        "name": "_stakeMultipliers",
-        "type": "uint256[3]"
-      }
-    ],
+    "inputs": [],
     "payable": false,
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_connectedTCR",
+        "type": "address"
+      }
+    ],
+    "name": "ConnectedTCRSet",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -82,21 +34,9 @@
         "type": "address"
       },
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_request",
-        "type": "uint256"
-      },
-      {
         "indexed": false,
         "internalType": "uint256",
-        "name": "_round",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "_amount",
+        "name": "_contribution",
         "type": "uint256"
       },
       {
@@ -106,20 +46,7 @@
         "type": "uint8"
       }
     ],
-    "name": "AppealContribution",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "_connectedTCR",
-        "type": "address"
-      }
-    ],
-    "name": "ConnectedTCRSet",
+    "name": "Contribution",
     "type": "event"
   },
   {
@@ -192,95 +119,9 @@
         "internalType": "bytes32",
         "name": "_itemID",
         "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_request",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_round",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "enum GeneralizedTCR.Party",
-        "name": "_side",
-        "type": "uint8"
-      }
-    ],
-    "name": "HasPaidAppealFee",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "_itemID",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_requestIndex",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_roundIndex",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "_disputed",
-        "type": "bool"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "_resolved",
-        "type": "bool"
       }
     ],
     "name": "ItemStatusChange",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "_itemID",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "_submitter",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_evidenceGroupID",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "_data",
-        "type": "bytes"
-      }
-    ],
-    "name": "ItemSubmitted",
     "type": "event"
   },
   {
@@ -312,19 +153,13 @@
         "type": "bytes32"
       },
       {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_requestIndex",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "_evidenceGroupID",
-        "type": "uint256"
+        "indexed": false,
+        "internalType": "string",
+        "name": "_data",
+        "type": "string"
       }
     ],
-    "name": "RequestEvidenceGroupID",
+    "name": "NewItem",
     "type": "event"
   },
   {
@@ -337,19 +172,44 @@
         "type": "bytes32"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "uint256",
-        "name": "_requestIndex",
+        "name": "_evidenceGroupID",
         "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "enum GeneralizedTCR.Status",
-        "name": "_requestType",
-        "type": "uint8"
       }
     ],
     "name": "RequestSubmitted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "_beneficiary",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "_itemID",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_request",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_round",
+        "type": "uint256"
+      }
+    ],
+    "name": "RewardWithdrawn",
     "type": "event"
   },
   {
@@ -395,6 +255,21 @@
   {
     "constant": true,
     "inputs": [],
+    "name": "RULING_OPTIONS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
     "name": "arbitrator",
     "outputs": [
       {
@@ -421,7 +296,7 @@
         "type": "uint256"
       }
     ],
-    "name": "arbitratorDisputeIDToItem",
+    "name": "arbitratorDisputeIDToItemID",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -487,55 +362,8 @@
         "type": "bytes32"
       }
     ],
-    "name": "itemIDtoIndex",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "itemList",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
     "name": "items",
     "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      },
       {
         "internalType": "enum GeneralizedTCR.Status",
         "name": "status",
@@ -570,6 +398,21 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "relayContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -670,9 +513,99 @@
     "constant": false,
     "inputs": [
       {
+        "internalType": "contract IArbitrator",
+        "name": "_arbitrator",
+        "type": "address"
+      },
+      {
         "internalType": "bytes",
-        "name": "_item",
+        "name": "_arbitratorExtraData",
         "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "_connectedTCR",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_registrationMetaEvidence",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_clearingMetaEvidence",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_governor",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256[4]",
+        "name": "_baseDeposits",
+        "type": "uint256[4]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_challengePeriodDuration",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[3]",
+        "name": "_stakeMultipliers",
+        "type": "uint256[3]"
+      },
+      {
+        "internalType": "address",
+        "name": "_relayContract",
+        "type": "address"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_item",
+        "type": "string"
+      }
+    ],
+    "name": "addItemDirectly",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "_itemID",
+        "type": "bytes32"
+      }
+    ],
+    "name": "removeItemDirectly",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_item",
+        "type": "string"
       }
     ],
     "name": "addItem",
@@ -1017,18 +950,18 @@
     "type": "function"
   },
   {
-    "constant": true,
-    "inputs": [],
-    "name": "itemCount",
-    "outputs": [
+    "constant": false,
+    "inputs": [
       {
-        "internalType": "uint256",
-        "name": "count",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "_relayContract",
+        "type": "address"
       }
     ],
+    "name": "changeRelayContract",
+    "outputs": [],
     "payable": false,
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1078,11 +1011,6 @@
     ],
     "name": "getItemInfo",
     "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      },
       {
         "internalType": "enum GeneralizedTCR.Status",
         "name": "status",
@@ -1151,12 +1079,12 @@
       },
       {
         "internalType": "contract IArbitrator",
-        "name": "arbitrator",
+        "name": "requestArbitrator",
         "type": "address"
       },
       {
         "internalType": "bytes",
-        "name": "arbitratorExtraData",
+        "name": "requestArbitratorExtraData",
         "type": "bytes"
       },
       {
