@@ -1,9 +1,9 @@
 {
   "GTCRFactory": {
     "42": {
-      "address": "0x74f27155A51B6bD65368362641e735D778f32390",
+      "address": "0x74f27155a51b6bd65368362641e735d778f32390",
       "transactionHash": "0xabdcc4f1e531751c1cbe4bbbc6855f0e67ec937a12acd1131cd40f28ff974c25",
-      "startBlock": 26742563
+      "startBlock": 26742561
     }
   }
 }

@@ -8,7 +8,6 @@ export function handleNewGTCR(event: NewGTCR): void {
   GeneralizedTCRDataSource.create(event.params._address);
 
   let registry = new Registry(event.params._address.toHexString());
-  registry.metaEvidenceCount = BigInt.fromI32(0);
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
@@ -18,6 +17,7 @@ export function handleNewGTCR(event: NewGTCR): void {
   clearingMetaEvidence.URI = '';
   clearingMetaEvidence.save();
 
+  registry.metaEvidenceCount = BigInt.fromI32(0);
   registry.registrationMetaEvidence = registrationMetaEvidence.id;
   registry.clearingMetaEvidence = clearingMetaEvidence.id;
   registry.numberOfItems = BigInt.fromI32(0);

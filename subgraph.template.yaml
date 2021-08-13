@@ -8,14 +8,16 @@ dataSources:
     name: GTCRFactory
     network: {{network}}
     source:
-      address: '{{GTCRFactory.address}}'
+      address: "{{GTCRFactory.address}}"
       abi: GTCRFactory
       startBlock: {{GTCRFactory.startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.3
+      apiVersion: 0.0.4
       language: wasm/assemblyscript
-      entities: []
+      entities:
+        - Registry
+        - MetaEvidence
       abis:
         - name: GTCRFactory
           file: ./abis/GTCRFactory.json
