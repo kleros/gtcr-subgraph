@@ -13,13 +13,13 @@ import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templ
 import {
   Contribution,
   Dispute,
-  GeneralizedTCR,
+  LightGeneralizedTCR,
   ItemStatusChange,
   RequestSubmitted,
   MetaEvidence as MetaEvidenceEvent,
   NewItem,
   RewardWithdrawn,
-} from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
+} from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -95,7 +95,7 @@ export function handleNewItem(event: NewItem): void {
   // will be set in handleRequestSubmitted.
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let gtcrContract = GeneralizedTCR.bind(event.address);
+  let gtcrContract = LightGeneralizedTCR.bind(event.address);
   let registry = Registry.load(event.address.toHexString());
   let itemInfo = gtcrContract.getItemInfo(event.params._itemID);
 
@@ -118,7 +118,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
 
-  let tcr = GeneralizedTCR.bind(event.address);
+  let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
   let item = Item.load(graphItemID);
   let registry = Registry.load(event.address.toHexString());
@@ -182,7 +182,7 @@ export function handleContribution(event: Contribution): void {
   let roundID = requestID + '-' + roundIndex.toString();
   let round = Round.load(roundID);
 
-  let tcr = GeneralizedTCR.bind(event.address);
+  let tcr = LightGeneralizedTCR.bind(event.address);
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
 
   let requestInfo = tcr.getRequestInfo(
@@ -248,7 +248,7 @@ export function handleContribution(event: Contribution): void {
 }
 
 export function handleRequestChallenged(event: Dispute): void {
-  let tcr = GeneralizedTCR.bind(event.address);
+  let tcr = LightGeneralizedTCR.bind(event.address);
   let itemID = tcr.arbitratorDisputeIDToItemID(
     event.params._arbitrator,
     event.params._disputeID,
@@ -279,7 +279,7 @@ export function handleAppealPossible(event: AppealPossible): void {
   let registry = Registry.load(event.params._arbitrable.toHexString());
   if (registry == null) return; // Event not related to a GTCR.
 
-  let tcr = GeneralizedTCR.bind(event.params._arbitrable);
+  let tcr = LightGeneralizedTCR.bind(event.params._arbitrable);
   let itemID = tcr.arbitratorDisputeIDToItemID(
     event.address,
     event.params._disputeID
@@ -317,7 +317,7 @@ export function handleAppealPossible(event: AppealPossible): void {
 }
 
 export function handleRequestResolved(event: ItemStatusChange): void {
-  let tcr = GeneralizedTCR.bind(event.address);
+  let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
   if (itemInfo.value0 == 2 || itemInfo.value0 == 3)
     return // Request is not resolved yet. No-op.
@@ -372,7 +372,7 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
     // in the constructor.
     // Use this opportunity to create the arbitrator datasource
     // to start monitoring it for events (if we aren't already).
-    let tcr = GeneralizedTCR.bind(event.address);
+    let tcr = LightGeneralizedTCR.bind(event.address);
     let arbitratorAddr = tcr.arbitrator()
     let arbitrator = Arbitrator.load(arbitratorAddr.toHexString());
     if (!arbitrator) {

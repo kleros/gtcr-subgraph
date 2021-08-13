@@ -8,19 +8,19 @@ const chainNameToChainId = {
   rinkeby: 4
 }
 
-async function main() {        
+async function main() {
   const networkName = process.argv[2]
   const chainId = chainNameToChainId[networkName]
-  const deployments = JSON.parse(fs.readFileSync('networks.json', 'utf8'));  
-  const { address, startBlock } = deployments['GTCRFactory'][chainId]
+  const deployments = JSON.parse(fs.readFileSync('networks.json', 'utf8'));
+  const { address, startBlock } = deployments['LightGTCRFactory'][chainId]
   const templateData = {
     network: networkName
   };
-  templateData['GTCRFactory'] = {
+  templateData['LightGTCRFactory'] = {
     address,
     addressLowerCase: address.toLowerCase(),
     startBlock,
-  };   
+  };
 
   for (const templatedFileDesc of [
     ['subgraph', 'yaml']

@@ -5,12 +5,12 @@
   "scripts": {
     "deploy:kovan": "graph deploy --product hosted-service mtsalenc/light-curate-kovan",
     "fix-schema.ts": "replace-in-file '/(;\\s*if \\()value === null/mg' '$1value === null || value.kind === ValueKind.NULL' generated/schema.ts --isRegex",
-    "codegen:kovan": "node render-templates.js kovan && graph codegen && npm run fix-schema.ts",
-    "build": "graph build",
-    "publish:kovan": "npm run codegen:kovan && npm run deploy:kovan",
+    "codegen:kovan": "node render-templates.js kovan && graph codegen && yarn fix-schema.ts",
+    "build": "yarn codegen:kovan && graph build",
+    "publish:kovan": "yarn build && yarn deploy:kovan",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
-    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:secrets",
+    "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",
     "format": "prettier --config .prettierrc 'src/**/*.ts' --write && eslint . --ext .ts,.tsx --fix"
   },
   "repository": {

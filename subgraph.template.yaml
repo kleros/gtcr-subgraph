@@ -5,12 +5,12 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum/contract
-    name: GTCRFactory
+    name: LightGTCRFactory
     network: {{network}}
     source:
-      address: "{{GTCRFactory.address}}"
-      abi: GTCRFactory
-      startBlock: {{GTCRFactory.startBlock}}
+      address: '{{LightGTCRFactory.address}}'
+      abi: LightGTCRFactory
+      startBlock: {{LightGTCRFactory.startBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.4
@@ -19,18 +19,18 @@ dataSources:
         - Registry
         - MetaEvidence
       abis:
-        - name: GTCRFactory
-          file: ./abis/GTCRFactory.json
+        - name: LightGTCRFactory
+          file: ./abis/LightGTCRFactory.json
       eventHandlers:
         - event: NewGTCR(indexed address)
           handler: handleNewGTCR
-      file: ./src/GTCRFactoryMapping.ts
+      file: ./src/LightGTCRFactoryMapping.ts
 templates:
   - kind: ethereum/contract
-    name: GeneralizedTCR
+    name: LightGeneralizedTCR
     network: {{network}}
     source:
-      abi: GeneralizedTCR
+      abi: LightGeneralizedTCR
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.3
@@ -41,8 +41,8 @@ templates:
         - Round
         - Contribution
       abis:
-        - name: GeneralizedTCR
-          file: ./abis/GeneralizedTCR.json
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json
         - name: IArbitrator
           file: ./abis/IArbitrator.json
       eventHandlers:
@@ -60,7 +60,7 @@ templates:
           handler: handleRewardWithdrawn
         - event: MetaEvidence(indexed uint256,string)
           handler: handleMetaEvidence
-      file: ./src/GeneralizedTCRMapping.ts
+      file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator
     network: {{network}}
@@ -74,9 +74,9 @@ templates:
       abis:
         - name: IArbitrator
           file: ./abis/IArbitrator.json
-        - name: GeneralizedTCR
-          file: ./abis/GeneralizedTCR.json
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json
       eventHandlers:
         - event: AppealPossible(indexed uint256,indexed address)
           handler: handleAppealPossible
-      file: ./src/GeneralizedTCRMapping.ts
+      file: ./src/LightGeneralizedTCRMapping.ts

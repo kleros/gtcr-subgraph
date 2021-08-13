@@ -1,11 +1,11 @@
 /* eslint-disable prefer-const */
 import { BigInt } from '@graphprotocol/graph-ts';
-import { NewGTCR } from '../generated/GTCRFactory/GTCRFactory';
+import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
 import { MetaEvidence, Registry } from '../generated/schema';
-import { GeneralizedTCR as GeneralizedTCRDataSource } from '../generated/templates';
+import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
 
 export function handleNewGTCR(event: NewGTCR): void {
-  GeneralizedTCRDataSource.create(event.params._address);
+  LightGeneralizedTCRDataSource.create(event.params._address);
 
   let registry = new Registry(event.params._address.toHexString());
 
