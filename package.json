@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "Subgraph for Generalized TCR contracts",
   "scripts": {
-    "deploy:kovan": "graph deploy --product hosted-service mtsalenc/light-curate-kovan",
     "fix-schema.ts": "replace-in-file '/(;\\s*if \\()value === null/mg' '$1value === null || value.kind === ValueKind.NULL' generated/schema.ts --isRegex",
     "codegen:kovan": "node render-templates.js kovan && graph codegen && yarn fix-schema.ts",
     "build": "yarn codegen:kovan && graph build",
-    "publish:kovan": "yarn build && yarn deploy:kovan",
+    "publish:kovan": "yarn build && graph deploy --product hosted-service mtsalenc/light-curate-kovan",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
     "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",
