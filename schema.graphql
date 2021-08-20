@@ -36,8 +36,20 @@ type Registry @entity {
   items: [Item!]! @derivedFrom(field: "registry")
   "The requests submitted to this list"
   requests: [Request!]! @derivedFrom(field: "registry")
-  "The number of items submitted to the list."
+  "The total number of items submitted to the list."
   numberOfItems: BigInt!
+  "The number of items currently in registered state"
+  registeredItems: BigInt!
+  "The number of items currently in absent state"
+  absentItems: BigInt!
+  "The number of items with pending registrations"
+  registrationRequestItems: BigInt!
+  "The number of items with pending removals"
+  clearingRequestItems: BigInt!
+  "The number of items with challenged registrations"
+  challengedRegistrationItems: BigInt!
+  "The number of items with challenged removal"
+  challengedClearingItems: BigInt!
 }
 
 type MetaEvidence @entity {
