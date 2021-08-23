@@ -157,7 +157,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.numberOfRounds = BigInt.fromI32(1);
   request.requestType = item.status;
   request.evidenceGroupID = event.params._evidenceGroupID;
-  request.transactionHash = event.transaction.hash;
+  request.creationTx = event.transaction.hash;
   if (request.requestType == REGISTRATION_REQUESTED)
     request.metaEvidence = registry.registrationMetaEvidence;
   else request.metaEvidence = registry.clearingMetaEvidence;
@@ -343,6 +343,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   let request = Request.load(graphItemID + '-' + requestIndex.toString());
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
+  request.resolutionTx = event.transaction.hash;
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
 
   request.save();

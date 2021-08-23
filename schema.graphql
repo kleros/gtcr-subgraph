@@ -112,7 +112,9 @@ type Request @entity {
   "The time the request was resolved."
   resolutionTime: BigInt!
   "The hash of the transaction that created this request."
-  transactionHash: Bytes!
+  creationTx: Bytes!
+  "The hash of the transaction that solved this request."
+  resolutionTx: Bytes
 }
 
 type Round @entity {
