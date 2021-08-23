@@ -105,7 +105,7 @@ let ZERO_ADDRESS = Bytes.fromHexString(
   '0x0000000000000000000000000000000000000000',
 ) as Bytes;
 
-function JSONValueToString(
+function JSONValueToMaybeString(
   value: JSONValue | null,
   _default: string | null = '',
 ): string | null {
@@ -186,11 +186,11 @@ export function handleNewItem(event: NewItem): void {
 
       let itemPropId = graphItemID + '@' + label.toString();
       let itemProp = new ItemProp(itemPropId);
-      itemProp.type = JSONValueToString(_type);
-      itemProp.label = JSONValueToString(label);
-      itemProp.description = JSONValueToString(description);
+      itemProp.type = JSONValueToMaybeString(_type);
+      itemProp.label = JSONValueToMaybeString(label);
+      itemProp.description = JSONValueToMaybeString(description);
       itemProp.isIdentifier = JSONValueToBool(isIdentifier);
-      itemProp.value = JSONValueToString(value);
+      itemProp.value = JSONValueToMaybeString(value);
       itemProp.item = item.id;
 
       itemProp.save();
