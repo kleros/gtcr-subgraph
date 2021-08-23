@@ -157,6 +157,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.numberOfRounds = BigInt.fromI32(1);
   request.requestType = item.status;
   request.evidenceGroupID = event.params._evidenceGroupID;
+  request.transactionHash = event.transaction.hash;
   if (request.requestType == REGISTRATION_REQUESTED)
     request.metaEvidence = registry.registrationMetaEvidence;
   else request.metaEvidence = registry.clearingMetaEvidence;
