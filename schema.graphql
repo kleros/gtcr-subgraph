@@ -48,7 +48,7 @@ type MetaEvidence @entity {
 }
 
 type Item @entity {
-  "The id of the item in the subgraph entity. Format: <listaddress>@<itemID>"
+  "The id of the item in the subgraph entity. Format: <itemID>@<listaddress_lowercase>"
   id: ID!
   "The ID of the item in the registry. Also the keccak256 hash of the data."
   itemID: Bytes!
