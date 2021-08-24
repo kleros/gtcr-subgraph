@@ -1,7 +1,17 @@
 /* eslint-disable prefer-const */
-import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts';
+import {
+  Bytes,
+  BigInt,
+  Address,
+  ipfs,
+  json,
+  JSONValue,
+  JSONValueKind,
+  log,
+} from '@graphprotocol/graph-ts';
 import {
   Item,
+  ItemProp,
   Request,
   Round,
   Registry,
@@ -95,6 +105,43 @@ let ZERO_ADDRESS = Bytes.fromHexString(
   '0x0000000000000000000000000000000000000000',
 ) as Bytes;
 
+function JSONValueToMaybeString(
+  value: JSONValue | null,
+  _default: string | null = '',
+): string | null {
+  if (value == null || value.isNull()) {
+    return null;
+  }
+
+  switch (value.kind) {
+    case JSONValueKind.BOOL:
+      return value.toBool() == true ? 'true' : 'false';
+    case JSONValueKind.STRING:
+      return value.toString();
+    case JSONValueKind.NUMBER:
+      return value.toBigInt().toHexString();
+    default:
+      return _default;
+  }
+}
+
+function JSONValueToBool(value: JSONValue | null, _default: boolean = false): boolean {
+  if (value == null || value.isNull()) {
+    return _default;
+  }
+
+  switch (value.kind) {
+    case JSONValueKind.BOOL:
+      return value.toBool();
+    case JSONValueKind.STRING:
+      return value.toString() === 'true';
+    case JSONValueKind.NUMBER:
+      return value.toBigInt().notEqual(BigInt.fromString('0'));
+    default:
+      return _default;
+  }
+}
+
 export function handleNewItem(event: NewItem): void {
   // We assume this is an item added via addItemDirectly.
   // If it was emitted via addItem, all the missing data
@@ -118,6 +165,39 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
   registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
+
+  let jsonStr = ipfs.cat(item.data);
+  if (jsonStr != null) {
+    let jsonObj = json.fromBytes(jsonStr as Bytes).toObject();
+    let columns = jsonObj.get('columns').toArray();
+    let values = jsonObj.get('values').toObject();
+
+    for (let i = 0; i < columns.length; i++) {
+      let col = columns[i];
+      let colObj = col.toObject();
+
+      let label = colObj.get('label');
+
+      let description = colObj.get('description');
+      let _type = colObj.get('type');
+      let isIdentifier = colObj.get('isIdentifier');
+
+      let value = values.get(label.toString());
+
+      let itemPropId = graphItemID + '@' + label.toString();
+      let itemProp = new ItemProp(itemPropId);
+      itemProp.type = JSONValueToMaybeString(_type);
+      itemProp.label = JSONValueToMaybeString(label);
+      itemProp.description = JSONValueToMaybeString(description);
+      itemProp.isIdentifier = JSONValueToBool(isIdentifier);
+      itemProp.value = JSONValueToMaybeString(value);
+      itemProp.item = item.id;
+
+      itemProp.save();
+    }
+  } else {
+    log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
+  }
 
   item.save();
   registry.save();
