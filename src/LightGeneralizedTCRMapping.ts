@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts';
+import { Bytes, BigInt, Address } from '@graphprotocol/graph-ts';
 import {
   Item,
   Request,
@@ -44,6 +44,11 @@ import {
 // requestID: <itemID>@<tcrAddress>-0
 //
 // The only exception to this rule is the itemID, which is the in-contract itemID.
+//
+// TIP: Before reading an event handler for the very first time, we recommend
+// looking at where that event is emitted in the contract. Remember that
+// the order in which events are emitted define the order in which
+// handlers are run.
 
 let ABSENT = 'Absent';
 let REGISTERED = 'Registered';
@@ -56,11 +61,19 @@ let REJECT = 'Reject';
 
 let REQUESTER_CODE = 1;
 
+let CONTRACT_STATUS = {
+  ABSENT: 0,
+  REGISTERED: 1,
+  REGISTRATION_REQUESTED: 2,
+  CLEARING_REQUESTED: 3,
+};
+
 function getStatus(status: number): string {
-  if (status == 0) return ABSENT;
-  if (status == 1) return REGISTERED;
-  if (status == 2) return REGISTRATION_REQUESTED;
-  if (status == 3) return CLEARING_REQUESTED;
+  if (status == CONTRACT_STATUS.ABSENT) return ABSENT;
+  if (status == CONTRACT_STATUS.REGISTERED) return REGISTERED;
+  if (status == CONTRACT_STATUS.REGISTRATION_REQUESTED)
+    return REGISTRATION_REQUESTED;
+  if (status == CONTRACT_STATUS.CLEARING_REQUESTED) return CLEARING_REQUESTED;
   return 'Error';
 }
 
@@ -97,7 +110,7 @@ let ZERO_ADDRESS = Bytes.fromHexString(
 
 export function handleNewItem(event: NewItem): void {
   // We assume this is an item added via addItemDirectly.
-  // If it was emitted via addItem, all the missing data
+  // If it was emitted via addItem, all the missing/wrong data
   // will be set in handleRequestSubmitted.
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
@@ -323,19 +336,34 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.save();
 }
 
-export function handleRequestResolved(event: ItemStatusChange): void {
+export function handleStatusUpdated(event: ItemStatusChange): void {
+  // This handler is used transations to item statuses 0 and 1.
+  // All other status updates are handled elsewhere.
   let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
-  if (itemInfo.value0 == 2 || itemInfo.value0 == 3) return; // Request is not resolved yet. No-op.
+  if (
+    itemInfo.value0 == CONTRACT_STATUS.REGISTRATION_REQUESTED ||
+    itemInfo.value0 == CONTRACT_STATUS.CLEARING_REQUESTED
+  ) {
+    // Request not yet resolved. No-op as changes are handled
+    // elsewhere.
+    return;
+  }
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-
   let item = Item.load(graphItemID);
+
   item.status = getStatus(itemInfo.value0);
-  item.latestRequestResolutionTime = event.block.timestamp;
   item.disputed = false;
-  item.save();
+  if (!event.params._updatedDirectly) {
+    // Direct actions (e.g. addItemDirectly and removeItemDirectly)
+    // don't envolve any requests. Only the item is updated.
+    item.save();
+    return;
+  }
+
+  item.latestRequestResolutionTime = event.block.timestamp;
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
@@ -347,6 +375,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
 
   request.save();
+  item.save();
 }
 
 export function handleRewardWithdrawn(event: RewardWithdrawn): void {
