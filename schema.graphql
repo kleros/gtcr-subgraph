@@ -56,6 +56,8 @@ type Item @entity {
   data: String!
   "The parsed data describing the item."
   props: [ItemProp]! @derivedFrom(field: "item")
+  "The item identifiers combined as a single string."
+  keywords: String
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
@@ -75,6 +77,13 @@ type Item @entity {
   "The account that challenged the latest request, if any."
   latestChallenger: Bytes!
 }
+
+type _Schema_ @fulltext(
+  name: "itemSearch"
+  language: en
+  algorithm: rank
+  include: [{ entity: "Item", fields: [{ name: "keywords" }] }]
+)
 
 type ItemProp @entity {
   id: ID!
