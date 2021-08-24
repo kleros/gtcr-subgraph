@@ -63,6 +63,8 @@ type Item @entity {
   itemID: Bytes!
   "The data describing the item."
   data: String!
+  "The parsed data describing the item."
+  props: [ItemProp]! @derivedFrom(field: "item")
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
@@ -81,6 +83,16 @@ type Item @entity {
   latestRequester: Bytes!
   "The account that challenged the latest request, if any."
   latestChallenger: Bytes!
+}
+
+type ItemProp @entity {
+  id: ID!
+  type: String!
+  label: String!
+  description: String!
+  isIdentifier: Boolean!
+  value: String
+  item: Item!
 }
 
 type Request @entity {
