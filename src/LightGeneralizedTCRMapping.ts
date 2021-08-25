@@ -125,7 +125,10 @@ function JSONValueToMaybeString(
   }
 }
 
-function JSONValueToBool(value: JSONValue | null, _default: boolean = false): boolean {
+function JSONValueToBool(
+  value: JSONValue | null,
+  _default: boolean = false,
+): boolean {
   if (value == null || value.isNull()) {
     return _default;
   }
@@ -166,6 +169,8 @@ export function handleNewItem(event: NewItem): void {
 
   registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
 
+  let keywordList: string[] = [];
+
   let jsonStr = ipfs.cat(item.data);
   if (jsonStr != null) {
     let jsonObj = json.fromBytes(jsonStr as Bytes).toObject();
@@ -193,10 +198,18 @@ export function handleNewItem(event: NewItem): void {
       itemProp.value = JSONValueToMaybeString(value);
       itemProp.item = item.id;
 
+      if (itemProp.isIdentifier && itemProp.value != null) {
+        keywordList.push(itemProp.value);
+      }
+
       itemProp.save();
     }
   } else {
     log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
+  }
+
+  if (keywordList.length > 0) {
+    item.keywords = keywordList.join(' | ');
   }
 
   item.save();
