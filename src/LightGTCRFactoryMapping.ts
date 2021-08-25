@@ -20,7 +20,6 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.metaEvidenceCount = BigInt.fromI32(0);
   registry.registrationMetaEvidence = registrationMetaEvidence.id;
   registry.clearingMetaEvidence = clearingMetaEvidence.id;
-  registry.numberOfItems = BigInt.fromI32(0);
   registry.numberOfAbsent = BigInt.fromI32(0);
   registry.numberOfRegistered = BigInt.fromI32(0);
   registry.numberOfRegistrationRequested = BigInt.fromI32(0);
