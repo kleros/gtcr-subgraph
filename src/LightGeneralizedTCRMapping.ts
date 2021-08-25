@@ -73,42 +73,42 @@ let REJECT = 'Reject';
 
 let REQUESTER_CODE = 1;
 
-enum CONTRACT_STATUS {
-  ABSENT,
-  REGISTERED,
+let ABSENT_CODE = 0;
+let REGISTERED_CODE = 1;
+let REGISTRATION_REQUESTED_CODE = 2;
+let CLEARING_REQUESTED_CODE = 3;
+let CHALLENGED_REGISTRATION_REQUEST_CODE = 4;
+let CHALLENGED_CLEARING_REQUEST_CODE = 5;
+let CONTRACT_STATUS_EXTENDED = new Map<string, number>();
+CONTRACT_STATUS_EXTENDED.set(ABSENT, ABSENT_CODE);
+CONTRACT_STATUS_EXTENDED.set(REGISTERED, REGISTERED_CODE);
+CONTRACT_STATUS_EXTENDED.set(
   REGISTRATION_REQUESTED,
-  CLEARING_REQUESTED,
-}
+  REGISTRATION_REQUESTED_CODE,
+);
+CONTRACT_STATUS_EXTENDED.set(CLEARING_REQUESTED, CLEARING_REQUESTED_CODE);
 
-enum CONTRACT_STATUS_NAMES {
-  ABSENT = 'Absent',
-  REGISTERED = 'Registered',
-  REGISTRATION_REQUESTED = 'RegistrationRequested',
-  CLEARING_REQUESTED = 'ClearingRequested',
-}
+let CONTRACT_STATUS_NAMES = new Map<number, string>();
+CONTRACT_STATUS_NAMES.set(ABSENT_CODE, 'Absent');
+CONTRACT_STATUS_NAMES.set(REGISTERED_CODE, 'Registered');
+CONTRACT_STATUS_NAMES.set(REGISTRATION_REQUESTED_CODE, 'RegistrationRequested');
+CONTRACT_STATUS_NAMES.set(CLEARING_REQUESTED_CODE, 'ClearingRequested');
 
-let EXTENDED_STATUS = {
-  ...CONTRACT_STATUS,
-  CHALLENGED_REGISTRATION_REQUEST: 4,
-  CHALELNGED_CLEARING_REQUEST: 5,
-};
-
-function getExtendedStatus(item: Item): number {
-  if (item.disputed) {
-    if (item.status == CONTRACT_STATUS_NAMES.REGISTRATION_REQUESTED)
-      return EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST;
-    else return EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST;
+function getExtendedStatus(disputed: boolean, status: string): number {
+  if (disputed) {
+    if (status == CONTRACT_STATUS_NAMES.get(REGISTRATION_REQUESTED_CODE))
+      return CHALLENGED_REGISTRATION_REQUEST_CODE;
+    else return CHALLENGED_CLEARING_REQUEST_CODE;
   }
 
-  return CONTRACT_STATUS[item.status];
+  return CONTRACT_STATUS_EXTENDED.get(status);
 }
 
 function getStatus(status: number): string {
-  if (status == CONTRACT_STATUS.ABSENT) return ABSENT;
-  if (status == CONTRACT_STATUS.REGISTERED) return REGISTERED;
-  if (status == CONTRACT_STATUS.REGISTRATION_REQUESTED)
-    return REGISTRATION_REQUESTED;
-  if (status == CONTRACT_STATUS.CLEARING_REQUESTED) return CLEARING_REQUESTED;
+  if (status == ABSENT_CODE) return ABSENT;
+  if (status == REGISTERED_CODE) return REGISTERED;
+  if (status == REGISTRATION_REQUESTED_CODE) return REGISTRATION_REQUESTED;
+  if (status == CLEARING_REQUESTED_CODE) return CLEARING_REQUESTED;
   return 'Error';
 }
 
@@ -152,53 +152,52 @@ function buildNewRound(
 function updateCounters(
   previousStatus: number,
   newStatus: number,
-  registry: Registry,
-) {
-  if (previousStatus == EXTENDED_STATUS.ABSENT) {
+  registryAddress: Address,
+): void {
+  let registry = Registry.load(registryAddress.toHexString());
+  if (previousStatus == ABSENT_CODE) {
     registry.numberOfAbsent = registry.numberOfAbsent.minus(BigInt.fromI32(1));
-  } else if (previousStatus == EXTENDED_STATUS.REGISTERED) {
+  } else if (previousStatus == REGISTERED_CODE) {
     registry.numberOfRegistered = registry.numberOfRegistered.minus(
       BigInt.fromI32(1),
     );
-  } else if (previousStatus == EXTENDED_STATUS.REGISTRATION_REQUESTED) {
+  } else if (previousStatus == REGISTRATION_REQUESTED_CODE) {
     registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.minus(
       BigInt.fromI32(1),
     );
-  } else if (previousStatus == EXTENDED_STATUS.CLEARING_REQUESTED) {
+  } else if (previousStatus == CLEARING_REQUESTED_CODE) {
     registry.numberOfClearingRequested = registry.numberOfClearingRequested.minus(
       BigInt.fromI32(1),
     );
-  } else if (
-    previousStatus == EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST
-  ) {
+  } else if (previousStatus == CHALLENGED_REGISTRATION_REQUEST_CODE) {
     registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.minus(
       BigInt.fromI32(1),
     );
-  } else if (previousStatus == EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST) {
+  } else if (previousStatus == CHALLENGED_CLEARING_REQUEST_CODE) {
     registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.minus(
       BigInt.fromI32(1),
     );
   }
 
-  if (newStatus == EXTENDED_STATUS.ABSENT) {
+  if (newStatus == ABSENT_CODE) {
     registry.numberOfAbsent = registry.numberOfAbsent.plus(BigInt.fromI32(1));
-  } else if (newStatus == EXTENDED_STATUS.REGISTERED) {
+  } else if (newStatus == REGISTERED_CODE) {
     registry.numberOfRegistered = registry.numberOfRegistered.plus(
       BigInt.fromI32(1),
     );
-  } else if (newStatus == EXTENDED_STATUS.REGISTRATION_REQUESTED) {
+  } else if (newStatus == REGISTRATION_REQUESTED_CODE) {
     registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.plus(
       BigInt.fromI32(1),
     );
-  } else if (newStatus == EXTENDED_STATUS.CLEARING_REQUESTED) {
+  } else if (newStatus == CLEARING_REQUESTED_CODE) {
     registry.numberOfClearingRequested = registry.numberOfClearingRequested.plus(
       BigInt.fromI32(1),
     );
-  } else if (newStatus == EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST) {
+  } else if (newStatus == CHALLENGED_REGISTRATION_REQUEST_CODE) {
     registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.plus(
       BigInt.fromI32(1),
     );
-  } else if (newStatus == EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST) {
+  } else if (newStatus == CHALLENGED_CLEARING_REQUEST_CODE) {
     registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.plus(
       BigInt.fromI32(1),
     );
@@ -341,7 +340,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   // handleNewItem, executed before this handler and so `previousStatus`
   // would be wrong. We use a condition to detect if its the very
   // first request and if so, ignore its contents (see below in accounting).
-  let previousStatus = getExtendedStatus(item);
+  let previousStatus = getExtendedStatus(item.disputed, item.status);
 
   item.numberOfRequests = item.numberOfRequests.plus(BigInt.fromI32(1));
   item.status = getStatus(itemInfo.value0);
@@ -349,7 +348,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = event.block.timestamp;
 
-  let newStatus = getExtendedStatus(item);
+  let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
@@ -385,11 +384,11 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   if (itemInfo.value1.equals(BigInt.fromI32(1))) {
     // This is the first request for this item, which must be
     // a registration request.
-    registry.numberOfRegistrationRequests = registry.numberOfRegistrationRequests.plus(
+    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.plus(
       BigInt.fromI32(1),
     );
   } else {
-    updateCounters(previousStatus, newStatus, registry);
+    updateCounters(previousStatus, newStatus, event.address);
   }
 
   round.save();
@@ -491,10 +490,10 @@ export function handleRequestChallenged(event: Dispute): void {
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = Item.load(graphItemID);
 
-  let previousStatus = getExtendedStatus(item);
+  let previousStatus = getExtendedStatus(item.disputed, item.status);
   item.disputed = true;
   item.latestChallenger = event.transaction.from;
-  let newStatus = getExtendedStatus(item);
+  let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
@@ -508,13 +507,11 @@ export function handleRequestChallenged(event: Dispute): void {
   let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
 
   // Accounting.
-  let registry = Registry.load(event.address.toHexString());
-  updateCounters(previousStatus, newStatus, registry);
+  updateCounters(previousStatus, newStatus, event.address);
 
   newRound.save();
   request.save();
   item.save();
-  registry.save();
 }
 
 export function handleAppealPossible(event: AppealPossible): void {
@@ -563,8 +560,8 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
   if (
-    itemInfo.value0 == CONTRACT_STATUS.REGISTRATION_REQUESTED ||
-    itemInfo.value0 == CONTRACT_STATUS.CLEARING_REQUESTED
+    itemInfo.value0 == REGISTRATION_REQUESTED_CODE ||
+    itemInfo.value0 == CLEARING_REQUESTED_CODE
   ) {
     // Request not yet resolved. No-op as changes are handled
     // elsewhere.
@@ -576,17 +573,14 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let item = Item.load(graphItemID);
 
   // We take the previous and new extended statuses for accounting purposes.
-  let previousStatus = getExtendedStatus(item);
-
+  let previousStatus = getExtendedStatus(item.disputed, item.status);
   item.status = getStatus(itemInfo.value0);
   item.disputed = false;
+  let newStatus = getExtendedStatus(item.disputed, item.status);
 
-  let newStatus = getExtendedStatus(item);
   if (previousStatus != newStatus) {
     // Accounting.
-    let registry = Registry.load(event.address.toHexString());
-    updateCounters(previousStatus, newStatus, registry);
-    registry.save();
+    updateCounters(previousStatus, newStatus, event.address);
   }
 
   if (!event.params._updatedDirectly) {

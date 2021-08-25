@@ -52,7 +52,7 @@ templates:
           handler: handleRequestSubmitted
         - event: Dispute(indexed address,indexed uint256,uint256,uint256)
           handler: handleRequestChallenged
-        - event: ItemStatusChange(indexed bytes32)
+        - event: ItemStatusChange(indexed bytes32,bool)
           handler: handleStatusUpdated
         - event: Contribution(indexed bytes32,indexed address,uint256,uint8)
           handler: handleContribution
