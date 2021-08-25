@@ -275,9 +275,6 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
-
-  registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
-
   let keywordList: string[] = [];
 
   let jsonStr = ipfs.cat(item.data);
