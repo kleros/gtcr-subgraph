@@ -36,8 +36,17 @@ type Registry @entity {
   items: [Item!]! @derivedFrom(field: "registry")
   "The requests submitted to this list"
   requests: [Request!]! @derivedFrom(field: "registry")
-  "The total number of items submitted to the list."
-  numberOfItems: BigInt!
+  "The total number of items in absent state."
+  numberOfAbsent: BigInt!
+  "The total number of items in registered state."
+  numberOfRegistered: BigInt!
+  "The total number of items in the registration requested state."
+  numberOfRegistrationRequested: BigInt!
+  numberOfClearingRequested: BigInt!
+  "The total number of items in the challenged registration state."
+  numberOfChallengedRegistrations: BigInt!
+  "The total number of items in the challenged removal state."
+  numberOfChallengedClearing: BigInt!
 }
 
 type MetaEvidence @entity {
@@ -48,7 +57,7 @@ type MetaEvidence @entity {
 }
 
 type Item @entity {
-  "The id of the item in the subgraph entity. Format: <listaddress>@<itemID>"
+  "The id of the item in the subgraph entity. Format: <itemID>@<listaddress_lowercase>"
   id: ID!
   "The ID of the item in the registry. Also the keccak256 hash of the data."
   itemID: Bytes!

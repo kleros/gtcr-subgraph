@@ -44,6 +44,8 @@ import {
 //
 // Registration and removal requests can be challenged. Once the request resolves (either by
 // passing the challenge period or via dispute resolution), the item state is updated to 0 or 1.
+// Note that in this mapping, we also use extended status, which just map the combination
+// of the item status and disputed status.
 //
 // A variable naming convention regarding arrays and entities:
 // Index: This is the position of the in-contract array.
@@ -54,6 +56,11 @@ import {
 // requestID: <itemID>@<tcrAddress>-0
 //
 // The only exception to this rule is the itemID, which is the in-contract itemID.
+//
+// TIP: Before reading an event handler for the very first time, we recommend
+// looking at where that event is emitted in the contract. Remember that
+// the order in which events are emitted define the order in which
+// handlers are run.
 
 let ABSENT = 'Absent';
 let REGISTERED = 'Registered';
@@ -66,11 +73,42 @@ let REJECT = 'Reject';
 
 let REQUESTER_CODE = 1;
 
+enum CONTRACT_STATUS {
+  ABSENT,
+  REGISTERED,
+  REGISTRATION_REQUESTED,
+  CLEARING_REQUESTED,
+}
+
+enum CONTRACT_STATUS_NAMES {
+  ABSENT = 'Absent',
+  REGISTERED = 'Registered',
+  REGISTRATION_REQUESTED = 'RegistrationRequested',
+  CLEARING_REQUESTED = 'ClearingRequested',
+}
+
+let EXTENDED_STATUS = {
+  ...CONTRACT_STATUS,
+  CHALLENGED_REGISTRATION_REQUEST: 4,
+  CHALELNGED_CLEARING_REQUEST: 5,
+};
+
+function getExtendedStatus(item: Item): number {
+  if (item.disputed) {
+    if (item.status == CONTRACT_STATUS_NAMES.REGISTRATION_REQUESTED)
+      return EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST;
+    else return EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST;
+  }
+
+  return CONTRACT_STATUS[item.status];
+}
+
 function getStatus(status: number): string {
-  if (status == 0) return ABSENT;
-  if (status == 1) return REGISTERED;
-  if (status == 2) return REGISTRATION_REQUESTED;
-  if (status == 3) return CLEARING_REQUESTED;
+  if (status == CONTRACT_STATUS.ABSENT) return ABSENT;
+  if (status == CONTRACT_STATUS.REGISTERED) return REGISTERED;
+  if (status == CONTRACT_STATUS.REGISTRATION_REQUESTED)
+    return REGISTRATION_REQUESTED;
+  if (status == CONTRACT_STATUS.CLEARING_REQUESTED) return CLEARING_REQUESTED;
   return 'Error';
 }
 
@@ -99,6 +137,74 @@ function buildNewRound(
   newRound.ruling = NONE;
   newRound.creationTime = timestamp;
   return newRound;
+}
+
+/**
+ * Decrements and increments registry counters based on item status change.
+ *
+ * The user should ensure that this function is called once and only once for
+ * each status update. What handlers were called before and which will be called
+ * after the one this is being called on? Do they call updateCounters?
+ * @param previousStatus The previous extended status of the item.
+ * @param newStatus The new extended status of the item.
+ * @param registry The registry to which update the counters.
+ */
+function updateCounters(
+  previousStatus: number,
+  newStatus: number,
+  registry: Registry,
+) {
+  if (previousStatus == EXTENDED_STATUS.ABSENT) {
+    registry.numberOfAbsent = registry.numberOfAbsent.minus(BigInt.fromI32(1));
+  } else if (previousStatus == EXTENDED_STATUS.REGISTERED) {
+    registry.numberOfRegistered = registry.numberOfRegistered.minus(
+      BigInt.fromI32(1),
+    );
+  } else if (previousStatus == EXTENDED_STATUS.REGISTRATION_REQUESTED) {
+    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.minus(
+      BigInt.fromI32(1),
+    );
+  } else if (previousStatus == EXTENDED_STATUS.CLEARING_REQUESTED) {
+    registry.numberOfClearingRequested = registry.numberOfClearingRequested.minus(
+      BigInt.fromI32(1),
+    );
+  } else if (
+    previousStatus == EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST
+  ) {
+    registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.minus(
+      BigInt.fromI32(1),
+    );
+  } else if (previousStatus == EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST) {
+    registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.minus(
+      BigInt.fromI32(1),
+    );
+  }
+
+  if (newStatus == EXTENDED_STATUS.ABSENT) {
+    registry.numberOfAbsent = registry.numberOfAbsent.plus(BigInt.fromI32(1));
+  } else if (newStatus == EXTENDED_STATUS.REGISTERED) {
+    registry.numberOfRegistered = registry.numberOfRegistered.plus(
+      BigInt.fromI32(1),
+    );
+  } else if (newStatus == EXTENDED_STATUS.REGISTRATION_REQUESTED) {
+    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.plus(
+      BigInt.fromI32(1),
+    );
+  } else if (newStatus == EXTENDED_STATUS.CLEARING_REQUESTED) {
+    registry.numberOfClearingRequested = registry.numberOfClearingRequested.plus(
+      BigInt.fromI32(1),
+    );
+  } else if (newStatus == EXTENDED_STATUS.CHALLENGED_REGISTRATION_REQUEST) {
+    registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.plus(
+      BigInt.fromI32(1),
+    );
+  } else if (newStatus == EXTENDED_STATUS.CHALELNGED_CLEARING_REQUEST) {
+    registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.plus(
+      BigInt.fromI32(1),
+    );
+  }
+
+  registry.save();
 }
 
 let ZERO_ADDRESS = Bytes.fromHexString(
@@ -147,8 +253,11 @@ function JSONValueToBool(
 
 export function handleNewItem(event: NewItem): void {
   // We assume this is an item added via addItemDirectly.
-  // If it was emitted via addItem, all the missing data
+  // If it was emitted via addItem, all the missing/wrong data
   // will be set in handleRequestSubmitted.
+  //
+  // Accounting for items added or removed directly is done
+  // inside handleStatusUpdated.
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let gtcrContract = LightGeneralizedTCR.bind(event.address);
@@ -166,6 +275,7 @@ export function handleNewItem(event: NewItem): void {
   item.latestChallenger = ZERO_ADDRESS;
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
+
 
   registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
 
@@ -225,11 +335,21 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let item = Item.load(graphItemID);
   let registry = Registry.load(event.address.toHexString());
 
+  // `previousStatus` and `newStatus` are used for accounting.
+  // Note that if this is the very first request of an item,
+  // item.status and item.dispute are dirty because they were set by
+  // handleNewItem, executed before this handler and so `previousStatus`
+  // would be wrong. We use a condition to detect if its the very
+  // first request and if so, ignore its contents (see below in accounting).
+  let previousStatus = getExtendedStatus(item);
+
   item.numberOfRequests = item.numberOfRequests.plus(BigInt.fromI32(1));
   item.status = getStatus(itemInfo.value0);
   item.latestRequester = event.transaction.from;
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = event.block.timestamp;
+
+  let newStatus = getExtendedStatus(item);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
@@ -261,9 +381,21 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   // in handleContribution.
   let round = buildNewRound(roundID, requestID, event.block.timestamp);
 
+  // Accounting.
+  if (itemInfo.value1.equals(BigInt.fromI32(1))) {
+    // This is the first request for this item, which must be
+    // a registration request.
+    registry.numberOfRegistrationRequests = registry.numberOfRegistrationRequests.plus(
+      BigInt.fromI32(1),
+    );
+  } else {
+    updateCounters(previousStatus, newStatus, registry);
+  }
+
   round.save();
   request.save();
   item.save();
+  registry.save();
 }
 
 export function handleContribution(event: Contribution): void {
@@ -358,8 +490,11 @@ export function handleRequestChallenged(event: Dispute): void {
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = Item.load(graphItemID);
+
+  let previousStatus = getExtendedStatus(item);
   item.disputed = true;
   item.latestChallenger = event.transaction.from;
+  let newStatus = getExtendedStatus(item);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
@@ -371,9 +506,15 @@ export function handleRequestChallenged(event: Dispute): void {
 
   let newRoundID = requestID + '-' + requestIndex.toString();
   let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
+
+  // Accounting.
+  let registry = Registry.load(event.address.toHexString());
+  updateCounters(previousStatus, newStatus, registry);
+
   newRound.save();
   request.save();
   item.save();
+  registry.save();
 }
 
 export function handleAppealPossible(event: AppealPossible): void {
@@ -416,19 +557,47 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.save();
 }
 
-export function handleRequestResolved(event: ItemStatusChange): void {
+export function handleStatusUpdated(event: ItemStatusChange): void {
+  // This handler is used to handle transations to item statuses 0 and 1.
+  // All other status updates are handled elsewhere.
   let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
-  if (itemInfo.value0 == 2 || itemInfo.value0 == 3) return; // Request is not resolved yet. No-op.
+  if (
+    itemInfo.value0 == CONTRACT_STATUS.REGISTRATION_REQUESTED ||
+    itemInfo.value0 == CONTRACT_STATUS.CLEARING_REQUESTED
+  ) {
+    // Request not yet resolved. No-op as changes are handled
+    // elsewhere.
+    return;
+  }
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-
   let item = Item.load(graphItemID);
+
+  // We take the previous and new extended statuses for accounting purposes.
+  let previousStatus = getExtendedStatus(item);
+
   item.status = getStatus(itemInfo.value0);
-  item.latestRequestResolutionTime = event.block.timestamp;
   item.disputed = false;
-  item.save();
+
+  let newStatus = getExtendedStatus(item);
+  if (previousStatus != newStatus) {
+    // Accounting.
+    let registry = Registry.load(event.address.toHexString());
+    updateCounters(previousStatus, newStatus, registry);
+    registry.save();
+  }
+
+  if (!event.params._updatedDirectly) {
+    // Direct actions (e.g. addItemDirectly and removeItemDirectly)
+    // don't envolve any requests. Only the item is updated.
+    item.save();
+
+    return;
+  }
+
+  item.latestRequestResolutionTime = event.block.timestamp;
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
@@ -440,6 +609,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
 
   request.save();
+  item.save();
 }
 
 export function handleRewardWithdrawn(event: RewardWithdrawn): void {
