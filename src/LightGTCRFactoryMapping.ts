@@ -23,6 +23,7 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.numberOfAbsent = BigInt.fromI32(0);
   registry.numberOfRegistered = BigInt.fromI32(0);
   registry.numberOfRegistrationRequested = BigInt.fromI32(0);
+  registry.numberOfClearingRequested = BigInt.fromI32(0);
   registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
   registry.numberOfChallengedClearing = BigInt.fromI32(0);
   registry.save();
