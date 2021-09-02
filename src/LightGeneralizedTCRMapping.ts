@@ -275,7 +275,7 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
-  let keywordList: string[] = [];
+  item.keywords = event.address.toHexString();
 
   let jsonStr = ipfs.cat(item.data);
   if (jsonStr != null) {
@@ -305,17 +305,13 @@ export function handleNewItem(event: NewItem): void {
       itemProp.item = item.id;
 
       if (itemProp.isIdentifier && itemProp.value != null) {
-        keywordList.push(itemProp.value);
+        item.keywords = item.keywords + " " + itemProp.value;
       }
 
       itemProp.save();
     }
   } else {
     log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
-  }
-
-  if (keywordList.length > 0) {
-    item.keywords = keywordList.join(' | ');
   }
 
   item.save();
