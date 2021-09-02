@@ -305,7 +305,7 @@ export function handleNewItem(event: NewItem): void {
       itemProp.item = item.id;
 
       if (itemProp.isIdentifier && itemProp.value != null) {
-        item.keywords = item.keywords + " " + itemProp.value;
+        item.keywords = item.keywords + " | " + itemProp.value;
       }
 
       itemProp.save();
