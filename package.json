@@ -6,7 +6,7 @@
     "fix-schema.ts": "replace-in-file '/(;\\s*if \\()value === null/mg' '$1value === null || value.kind === ValueKind.NULL' generated/schema.ts --isRegex",
     "codegen:kovan": "node render-templates.js kovan && graph codegen && yarn fix-schema.ts",
     "build:kovan": "yarn codegen:kovan && graph build",
-    "publish:kovan": "yarn build:kovan && graph deploy --product hosted-service kleros/curate-kovan",
+    "publish:kovan": "yarn build:kovan && graph deploy --product hosted-service eccentricexit/light-curate-kovan-ii",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
     "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",

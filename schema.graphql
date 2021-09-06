@@ -109,7 +109,7 @@ type _Schema_
     name: "itemSearch"
     language: en
     algorithm: rank
-    include: [{ entity: "Item", fields: [{ name: "keywords" }] }]
+    include: [{ entity: "LItem", fields: [{ name: "keywords" }] }]
   )
 
 type ItemProp @entity {
