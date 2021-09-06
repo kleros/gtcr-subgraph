@@ -12,8 +12,8 @@ import {
 import {
   LItem,
   ItemProp,
-  Request,
-  Round,
+  LRequest,
+  LRound,
   LRegistry,
   MetaEvidence,
   Arbitrator,
@@ -123,8 +123,8 @@ function buildNewRound(
   roundID: string,
   requestID: string,
   timestamp: BigInt,
-): Round {
-  let newRound = new Round(roundID);
+): LRound {
+  let newRound = new LRound(roundID);
   newRound.amountPaidRequester = BigInt.fromI32(0);
   newRound.amountPaidChallenger = BigInt.fromI32(0);
   newRound.feeRewards = BigInt.fromI32(0);
@@ -346,7 +346,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
 
-  let request = new Request(requestID);
+  let request = new LRequest(requestID);
   request.disputed = false;
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
@@ -401,11 +401,11 @@ export function handleContribution(event: Contribution): void {
   let item = LItem.load(graphItemID);
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
-  let request = Request.load(requestID);
+  let request = LRequest.load(requestID);
 
   let roundIndex = request.numberOfRounds.minus(BigInt.fromI32(1));
   let roundID = requestID + '-' + roundIndex.toString();
-  let round = Round.load(roundID);
+  let round = LRound.load(roundID);
 
   let tcr = LightGeneralizedTCR.bind(event.address);
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
@@ -490,7 +490,7 @@ export function handleRequestChallenged(event: Dispute): void {
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
-  let request = Request.load(requestID);
+  let request = LRequest.load(requestID);
   request.disputed = true;
   request.challenger = event.transaction.from;
   request.numberOfRounds = BigInt.fromI32(2);
@@ -520,11 +520,11 @@ export function handleAppealPossible(event: AppealPossible): void {
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = LItem.load(graphItemID);
 
-  let request = Request.load(
+  let request = LRequest.load(
     item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString(),
   );
 
-  let round = Round.load(
+  let round = LRound.load(
     request.id +
       '-' +
       request.numberOfRounds.minus(BigInt.fromI32(1)).toString(),
@@ -556,7 +556,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
     itemInfo.value0 == REGISTRATION_REQUESTED_CODE ||
     itemInfo.value0 == CLEARING_REQUESTED_CODE
   ) {
-    // Request not yet resolved. No-op as changes are handled
+    // LRequest not yet resolved. No-op as changes are handled
     // elsewhere.
     return;
   }
@@ -589,7 +589,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
 
-  let request = Request.load(graphItemID + '-' + requestIndex.toString());
+  let request = LRequest.load(graphItemID + '-' + requestIndex.toString());
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.resolutionTx = event.transaction.hash;

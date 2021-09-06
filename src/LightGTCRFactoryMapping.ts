@@ -7,7 +7,7 @@ import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generat
 export function handleNewGTCR(event: NewGTCR): void {
   LightGeneralizedTCRDataSource.create(event.params._address);
 
-  let Lregistry = new LRegistry(event.params._address.toHexString());
+  let registry = new LRegistry(event.params._address.toHexString());
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
