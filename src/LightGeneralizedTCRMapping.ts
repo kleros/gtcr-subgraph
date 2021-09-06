@@ -10,11 +10,11 @@ import {
   log,
 } from '@graphprotocol/graph-ts';
 import {
-  Item,
+  LItem,
   ItemProp,
   Request,
   Round,
-  Registry,
+  LRegistry,
   MetaEvidence,
   Arbitrator,
 } from '../generated/schema';
@@ -154,7 +154,7 @@ function updateCounters(
   newStatus: number,
   registryAddress: Address,
 ): void {
-  let registry = Registry.load(registryAddress.toHexString());
+  let registry = LRegistry.load(registryAddress.toHexString());
   if (previousStatus == ABSENT_CODE) {
     registry.numberOfAbsent = registry.numberOfAbsent.minus(BigInt.fromI32(1));
   } else if (previousStatus == REGISTERED_CODE) {
@@ -260,10 +260,10 @@ export function handleNewItem(event: NewItem): void {
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let gtcrContract = LightGeneralizedTCR.bind(event.address);
-  let registry = Registry.load(event.address.toHexString());
+  let registry = LRegistry.load(event.address.toHexString());
   let itemInfo = gtcrContract.getItemInfo(event.params._itemID);
 
-  let item = new Item(graphItemID);
+  let item = new LItem(graphItemID);
   item.itemID = event.params._itemID;
   item.data = event.params._data;
   item.numberOfRequests = BigInt.fromI32(0);
@@ -305,7 +305,7 @@ export function handleNewItem(event: NewItem): void {
       itemProp.item = item.id;
 
       if (itemProp.isIdentifier && itemProp.value != null) {
-        item.keywords = item.keywords + " | " + itemProp.value;
+        item.keywords = item.keywords + ' | ' + itemProp.value;
       }
 
       itemProp.save();
@@ -324,8 +324,8 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
   let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
-  let item = Item.load(graphItemID);
-  let registry = Registry.load(event.address.toHexString());
+  let item = LItem.load(graphItemID);
+  let registry = LRegistry.load(event.address.toHexString());
 
   // `previousStatus` and `newStatus` are used for accounting.
   // Note that if this is the very first request of an item,
@@ -398,7 +398,7 @@ export function handleContribution(event: Contribution): void {
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);
+  let item = LItem.load(graphItemID);
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = Request.load(requestID);
@@ -481,7 +481,7 @@ export function handleRequestChallenged(event: Dispute): void {
     event.params._disputeID,
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);
+  let item = LItem.load(graphItemID);
 
   let previousStatus = getExtendedStatus(item.disputed, item.status);
   item.disputed = true;
@@ -508,7 +508,7 @@ export function handleRequestChallenged(event: Dispute): void {
 }
 
 export function handleAppealPossible(event: AppealPossible): void {
-  let registry = Registry.load(event.params._arbitrable.toHexString());
+  let registry = LRegistry.load(event.params._arbitrable.toHexString());
   if (registry == null) return; // Event not related to a GTCR.
 
   let tcr = LightGeneralizedTCR.bind(event.params._arbitrable);
@@ -518,7 +518,7 @@ export function handleAppealPossible(event: AppealPossible): void {
   );
   let graphItemID =
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
-  let item = Item.load(graphItemID);
+  let item = LItem.load(graphItemID);
 
   let request = Request.load(
     item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString(),
@@ -563,7 +563,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);
+  let item = LItem.load(graphItemID);
 
   // We take the previous and new extended statuses for accounting purposes.
   let previousStatus = getExtendedStatus(item.disputed, item.status);
@@ -604,7 +604,7 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
 }
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
-  let registry = Registry.load(event.address.toHexString());
+  let registry = LRegistry.load(event.address.toHexString());
 
   registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
     BigInt.fromI32(1),

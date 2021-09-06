@@ -1,13 +1,13 @@
 /* eslint-disable prefer-const */
 import { BigInt } from '@graphprotocol/graph-ts';
 import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
-import { MetaEvidence, Registry } from '../generated/schema';
+import { MetaEvidence, LRegistry } from '../generated/schema';
 import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
 
 export function handleNewGTCR(event: NewGTCR): void {
   LightGeneralizedTCRDataSource.create(event.params._address);
 
-  let registry = new Registry(event.params._address.toHexString());
+  let Lregistry = new LRegistry(event.params._address.toHexString());
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';

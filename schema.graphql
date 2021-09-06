@@ -36,6 +36,23 @@ type Registry @entity {
   items: [Item!]! @derivedFrom(field: "registry")
   "The requests submitted to this list"
   requests: [Request!]! @derivedFrom(field: "registry")
+  "The number of items submitted to the list."
+  numberOfItems: BigInt!
+}
+
+type LRegistry @entity {
+  "The registry address"
+  id: ID!
+  "The current registration meta evidence"
+  registrationMetaEvidence: MetaEvidence!
+  "The current removal meta evidence"
+  clearingMetaEvidence: MetaEvidence!
+  "The number of MetaEvidence event logs emitted."
+  metaEvidenceCount: BigInt!
+  "The items submitted to this list"
+  items: [LItem!]! @derivedFrom(field: "registry")
+  "The requests submitted to this list"
+  requests: [LRequest!]! @derivedFrom(field: "registry")
   "The total number of items in absent state."
   numberOfAbsent: BigInt!
   "The total number of items in registered state."
@@ -56,7 +73,7 @@ type MetaEvidence @entity {
   URI: String!
 }
 
-type Item @entity {
+type LItem @entity {
   "The id of the item in the subgraph entity. Format: <itemID>@<listaddress_lowercase>"
   id: ID!
   "The ID of the item in the registry. Also the keccak256 hash of the data."
@@ -70,11 +87,11 @@ type Item @entity {
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
-  requests: [Request!]! @derivedFrom(field: "item")
+  requests: [LRequest!]! @derivedFrom(field: "item")
   "The total number of requests for this item."
   numberOfRequests: BigInt!
   "The registry where this item was submitted."
-  registry: Registry!
+  registry: LRegistry!
   "Time when the latest request was made."
   latestRequestSubmissionTime: BigInt!
   "The time the latest request was resolved."
@@ -102,7 +119,129 @@ type ItemProp @entity {
   description: String!
   isIdentifier: Boolean!
   value: String
-  item: Item!
+  item: LItem!
+}
+
+type LRequest @entity {
+  "The item ID (which is the keccak256 hash of its data)."
+  id: ID!
+  "True if a dispute was raised."
+  disputed: Boolean!
+  "ID of the dispute, if any."
+  disputeID: BigInt!
+  "Time when the request was made. Used to track when the challenge period ends."
+  submissionTime: BigInt!
+  "True if the request was executed and/or any raised disputes were resolved."
+  resolved: Boolean!
+  "The address of the party that made a request"
+  requester: Bytes!
+  "The address of the party that challenged the request"
+  challenger: Bytes!
+  "The arbitrator trusted to solve disputes for this request."
+  arbitrator: Bytes!
+  "The extra data for the trusted arbitrator of this request."
+  arbitratorExtraData: Bytes!
+  "The outcome of the dispute, if any. Note that unsuccessful appeal fundings can invert the arbitrator ruling (so this may differ from the ruling given by the arbitrator)."
+  disputeOutcome: Ruling!
+  "Tracks each round of a dispute in the form rounds[roundID]."
+  rounds: [LRound!]! @derivedFrom(field: "request")
+  "The ID of the evidence group for this request."
+  evidenceGroupID: BigInt!
+  "The total number of rounds on this request."
+  numberOfRounds: BigInt!
+  "Whether it was requested to add or remove the item to/from the list."
+  requestType: Status!
+  "The URI to the meta evidence used for this request."
+  metaEvidence: MetaEvidence!
+  "The item this request belongs to."
+  item: LItem!
+  "The registry where this request was submitted."
+  registry: LRegistry!
+  "The time the request was resolved."
+  resolutionTime: BigInt!
+  "The hash of the transaction that created this request."
+  creationTx: Bytes!
+  "The hash of the transaction that solved this request."
+  resolutionTx: Bytes
+}
+
+type LRound @entity {
+  id: ID!
+  "The total amount of appeal fees contributed to the requester in this round."
+  amountPaidRequester: BigInt!
+  "The total amount of appeal fees contributed to the challenger in this round."
+  amountPaidChallenger: BigInt!
+  "Whether the requester is fully funded."
+  hasPaidRequester: Boolean!
+  "Whether the challenger is fully funded."
+  hasPaidChallenger: Boolean!
+  "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
+  feeRewards: BigInt!
+  "The request to which this round belongs."
+  request: LRequest!
+  "The time the appeal period starts, if in the appeal period."
+  appealPeriodStart: BigInt!
+  "The time the appeal period ends, if in the appeal period."
+  appealPeriodEnd: BigInt!
+  "The time the round received the ruling."
+  rulingTime: BigInt!
+  "The ruling given by the arbitrator."
+  ruling: Ruling!
+  "The moment the round was created."
+  creationTime: BigInt!
+}
+
+type Round @entity {
+  id: ID!
+  "The total amount of appeal fees contributed to the requester in this round."
+  amountPaidRequester: BigInt!
+  "The total amount of appeal fees contributed to the challenger in this round."
+  amountPaidChallenger: BigInt!
+  "Whether the requester is fully funded."
+  hasPaidRequester: Boolean!
+  "Whether the challenger is fully funded."
+  hasPaidChallenger: Boolean!
+  "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
+  feeRewards: BigInt!
+  "The request to which this round belongs."
+  request: Request!
+  "The time the appeal period starts, if in the appeal period."
+  appealPeriodStart: BigInt!
+  "The time the appeal period ends, if in the appeal period."
+  appealPeriodEnd: BigInt!
+  "The time the round received the ruling."
+  rulingTime: BigInt!
+  "The ruling given by the arbitrator."
+  ruling: Ruling!
+  "The moment the round was created."
+  creationTime: BigInt!
+}
+
+type Item @entity {
+  "The id of the item in the subgraph entity. Format: <itemID>@<listaddress_lowercase>"
+  id: ID!
+  "The ID of the item in the registry. Also the keccak256 hash of the data."
+  itemID: Bytes!
+  "The data describing the item."
+  data: Bytes!
+  "The current status of the item."
+  status: Status!
+  "List of status change requests made for the item in the form requests[requestID]."
+  requests: [Request!]! @derivedFrom(field: "item")
+  "The total number of requests for this item."
+  numberOfRequests: BigInt!
+  "The registry where this item was submitted."
+  registry: Registry!
+  "Time when the latest request was made."
+  latestRequestSubmissionTime: BigInt!
+  "The time the latest request was resolved."
+  latestRequestResolutionTime: BigInt!
+  "Whether the item is currently disputed."
+  disputed: Boolean!
+  "The account that made the latest request to the item."
+  latestRequester: Bytes!
+  "The account that challenged the latest request, if any."
+  latestChallenger: Bytes!
 }
 
 type Request @entity {
@@ -142,34 +281,4 @@ type Request @entity {
   registry: Registry!
   "The time the request was resolved."
   resolutionTime: BigInt!
-  "The hash of the transaction that created this request."
-  creationTx: Bytes!
-  "The hash of the transaction that solved this request."
-  resolutionTx: Bytes
-}
-
-type Round @entity {
-  id: ID!
-  "The total amount of appeal fees contributed to the requester in this round."
-  amountPaidRequester: BigInt!
-  "The total amount of appeal fees contributed to the challenger in this round."
-  amountPaidChallenger: BigInt!
-  "Whether the requester is fully funded."
-  hasPaidRequester: Boolean!
-  "Whether the challenger is fully funded."
-  hasPaidChallenger: Boolean!
-  "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
-  feeRewards: BigInt!
-  "The request to which this round belongs."
-  request: Request!
-  "The time the appeal period starts, if in the appeal period."
-  appealPeriodStart: BigInt!
-  "The time the appeal period ends, if in the appeal period."
-  appealPeriodEnd: BigInt!
-  "The time the round received the ruling."
-  rulingTime: BigInt!
-  "The ruling given by the arbitrator."
-  ruling: Ruling!
-  "The moment the round was created."
-  creationTime: BigInt!
 }

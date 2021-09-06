@@ -16,7 +16,7 @@ dataSources:
       apiVersion: 0.0.4
       language: wasm/assemblyscript
       entities:
-        - Registry
+        - LRegistry
         - MetaEvidence
       abis:
         - name: LightGTCRFactory
@@ -25,6 +25,27 @@ dataSources:
         - event: NewGTCR(indexed address)
           handler: handleNewGTCR
       file: ./src/LightGTCRFactoryMapping.ts
+  - kind: ethereum/contract
+    name: GTCRFactory
+    network: {{network}}
+    source:
+      address: '{{GTCRFactory.address}}'
+      abi: GTCRFactory
+      startBlock: {{GTCRFactory.startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Registry
+        - MetaEvidence
+      abis:
+        - name: GTCRFactory
+          file: ./abis/GTCRFactory.json
+      eventHandlers:
+        - event: NewGTCR(indexed address)
+          handler: handleNewGTCR
+      file: ./src/GTCRFactoryMapping.ts
 templates:
   - kind: ethereum/contract
     name: LightGeneralizedTCR
@@ -36,7 +57,7 @@ templates:
       apiVersion: 0.0.3
       language: wasm/assemblyscript
       entities:
-        - Item
+        - LItem
         - Request
         - Round
         - Contribution
@@ -62,7 +83,7 @@ templates:
           handler: handleMetaEvidence
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
-    name: IArbitrator
+    name: LIArbitrator
     network: {{network}}
     source:
       abi: IArbitrator
@@ -80,3 +101,55 @@ templates:
         - event: AppealPossible(indexed uint256,indexed address)
           handler: handleAppealPossible
       file: ./src/LightGeneralizedTCRMapping.ts
+  - kind: ethereum/contract
+    name: GeneralizedTCR
+    network: {{network}}
+    source:
+      abi: GeneralizedTCR
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - Item
+        - Request
+        - Round
+        - Contribution
+      abis:
+        - name: GeneralizedTCR
+          file: ./abis/GeneralizedTCR.json
+        - name: IArbitrator
+          file: ./abis/IArbitrator.json
+      eventHandlers:
+        - event: ItemStatusChange(indexed bytes32,indexed uint256,indexed uint256,bool,bool)
+          handler: handleRequestResolved
+        - event: RequestEvidenceGroupID(indexed bytes32,indexed uint256,indexed uint256)
+          handler: handleRequestSubmitted
+        - event: Dispute(indexed address,indexed uint256,uint256,uint256)
+          handler: handleRequestChallenged
+        - event: AppealContribution(indexed bytes32,indexed address,indexed uint256,uint256,uint256,uint8)
+          handler: handleAppealContribution
+        - event: HasPaidAppealFee(indexed bytes32,indexed uint256,indexed uint256,uint8)
+          handler: handleHasPaidAppealFee
+        - event: MetaEvidence(indexed uint256,string)
+          handler: handleMetaEvidence
+      file: ./src/GeneralizedTCRMapping.ts
+  - kind: ethereum/contract
+    name: IArbitrator
+    network: {{network}}
+    source:
+      abi: IArbitrator
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities: []
+      abis:
+        - name: IArbitrator
+          file: ./abis/IArbitrator.json
+        - name: GeneralizedTCR
+          file: ./abis/GeneralizedTCR.json
+      eventHandlers:
+        - event: AppealPossible(indexed uint256,indexed address)
+          handler: handleAppealPossible
+      file: ./src/GeneralizedTCRMapping.ts
