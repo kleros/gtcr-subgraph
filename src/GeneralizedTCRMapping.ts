@@ -8,8 +8,11 @@ import {
   MetaEvidence,
   Arbitrator,
 } from '../generated/schema';
-import { AppealPossible, IArbitrator } from '../generated/templates/IArbitrator/IArbitrator';
-import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates'
+import {
+  AppealPossible,
+  IArbitrator,
+} from '../generated/templates/IArbitrator/IArbitrator';
+import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates';
 import {
   AppealContribution,
   Dispute,
@@ -57,7 +60,11 @@ function getFinalRuling(outcome: number): string {
   return 'Error';
 }
 
-function buildNewRound(roundID: string, requestId: string, timestamp: BigInt): Round {
+function buildNewRound(
+  roundID: string,
+  requestId: string,
+  timestamp: BigInt,
+): Round {
   let newRound = new Round(roundID);
   newRound.amountPaidRequester = BigInt.fromI32(0);
   newRound.amountPaidChallenger = BigInt.fromI32(0);
@@ -112,7 +119,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.challenger = ZERO_ADDRESS;
   request.requester = event.transaction.from;
   request.item = item.id;
-  request.registry = registry.id;  
+  request.registry = registry.id;
   request.resolutionTime = BigInt.fromI32(0);
 
   request.disputeOutcome = NONE;
@@ -200,7 +207,7 @@ export function handleRequestChallenged(event: Dispute): void {
     event.params._disputeID,
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
-  let item = Item.load(graphItemID);  
+  let item = Item.load(graphItemID);
   item.disputed = true;
   item.latestChallenger = event.transaction.from;
 
@@ -210,7 +217,7 @@ export function handleRequestChallenged(event: Dispute): void {
   let request = Request.load(requestID);
   request.disputed = true;
   request.challenger = event.transaction.from;
-  request.numberOfRounds = BigInt.fromI32(2);    
+  request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
   let requestInfo = tcr.getRequestInfo(
@@ -318,7 +325,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
     round.feeRewards = round.feeRewards.minus(appealCost);
     let newRoundID =
       requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
-    let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);    
+    let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
     newRound.save();
 
     request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
@@ -338,12 +345,12 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   if (registry.metaEvidenceCount.equals(BigInt.fromI32(1))) {
     // This means this is the first meta evidence event emitted,
     // in the constructor.
-    // Use this opportunity to create the arbitrator datasource 
+    // Use this opportunity to create the arbitrator datasource
     // to start monitoring it for events (if we aren't already).
-    let tcr = GeneralizedTCR.bind(event.address);    
-    let arbitratorAddr = tcr.arbitrator()
+    let tcr = GeneralizedTCR.bind(event.address);
+    let arbitratorAddr = tcr.arbitrator();
     let arbitrator = Arbitrator.load(arbitratorAddr.toHexString());
-    if (arbitrator) return // Data source already created.
+    if (arbitrator) return; // Data source already created.
 
     IArbitratorDataSourceTemplate.create(arbitratorAddr);
     arbitrator = new Arbitrator(arbitratorAddr.toHexString());
@@ -375,25 +382,25 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
 
 export function handleAppealPossible(event: AppealPossible): void {
   let registry = Registry.load(event.params._arbitrable.toHexString());
-  if (registry == null) return; // Event not related to a GTCR.  
+  if (registry == null) return; // Event not related to a GTCR.
 
   let tcr = GeneralizedTCR.bind(event.params._arbitrable);
   let itemID = tcr.arbitratorDisputeIDToItem(
     event.address,
-    event.params._disputeID
+    event.params._disputeID,
   );
   let graphItemID =
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = Item.load(graphItemID);
-  
+
   let request = Request.load(
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString()
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString(),
   );
 
   let round = Round.load(
     request.id +
       '-' +
-      request.numberOfRounds.minus(BigInt.fromI32(1)).toString()
+      request.numberOfRounds.minus(BigInt.fromI32(1)).toString(),
   );
 
   let arbitrator = IArbitrator.bind(event.address);
@@ -403,12 +410,11 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.rulingTime = event.block.timestamp;
 
   let currentRuling = arbitrator.currentRuling(request.disputeID);
-  round.ruling =
-    currentRuling.equals(BigInt.fromI32(0))
-      ? NONE
-      : currentRuling.equals(BigInt.fromI32(1))
-      ? ACCEPT
-      : REJECT;
+  round.ruling = currentRuling.equals(BigInt.fromI32(0))
+    ? NONE
+    : currentRuling.equals(BigInt.fromI32(1))
+    ? ACCEPT
+    : REJECT;
 
   item.save();
   round.save();

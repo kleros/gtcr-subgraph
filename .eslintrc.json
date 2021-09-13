@@ -5,10 +5,6 @@
     "node": true
   },
   "parser": "@typescript-eslint/parser",
-  "parserOptions": {
-    "project": "tsconfig.json",
-    "sourceType": "module"
-  },
   "plugins": [
     "@typescript-eslint",
     "prettier"
@@ -19,5 +15,18 @@
     "plugin:@typescript-eslint/recommended",
     "prettier"
   ],
-  "rules": {}
+  "rules": {
+    "@typescript-eslint/no-inferrable-types": "off"
+  },
+  "overrides": [
+    {
+      "files": [
+        "*.ts"
+      ],
+      "parserOptions": {
+        "project": ["./tsconfig.json"],
+        "sourceType": "module"
+      }
+    }
+  ]
 }

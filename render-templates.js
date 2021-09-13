@@ -5,27 +5,39 @@ const chainNameToChainId = {
   xdai: 100,
   mainnet: 1,
   kovan: 42,
-  rinkeby: 4
-}
+  rinkeby: 4,
+};
 
-async function main() {        
-  const networkName = process.argv[2]
-  const chainId = chainNameToChainId[networkName]
-  const deployments = JSON.parse(fs.readFileSync('networks.json', 'utf8'));  
-  const { address, startBlock } = deployments['GTCRFactory'][chainId]
+async function main() {
+  const networkName = process.argv[2];
+  const chainId = chainNameToChainId[networkName];
+  const deployments = JSON.parse(fs.readFileSync('networks.json', 'utf8'));
+  const {
+    address: lgtcrFactoryAddr,
+    startBlock: lgtcrFactoryStartBlock,
+  } = deployments['LightGTCRFactory'][chainId];
+  const {
+    address: gtcrFactoryAddr,
+    startBlock: gtcrFactoryStartBlock,
+  } = deployments['GTCRFactory'][chainId];
   const templateData = {
-    network: networkName
+    network: networkName,
+  };
+  templateData['LightGTCRFactory'] = {
+    address: lgtcrFactoryAddr,
+    addressLowerCase: lgtcrFactoryAddr.toLowerCase(),
+    startBlock: lgtcrFactoryStartBlock,
   };
   templateData['GTCRFactory'] = {
-    address,
-    addressLowerCase: address.toLowerCase(),
-    startBlock,
-  };   
+    address: gtcrFactoryAddr,
+    addressLowerCase: gtcrFactoryAddr.toLowerCase(),
+    startBlock: gtcrFactoryStartBlock,
+  };
 
-  for (const templatedFileDesc of [
-    ['subgraph', 'yaml']
-  ]) {
-    const template = fs.readFileSync(`${templatedFileDesc[0]}.template.${templatedFileDesc[1]}`).toString();
+  for (const templatedFileDesc of [['subgraph', 'yaml']]) {
+    const template = fs
+      .readFileSync(`${templatedFileDesc[0]}.template.${templatedFileDesc[1]}`)
+      .toString();
     fs.writeFileSync(
       `${templatedFileDesc[0]}.${templatedFileDesc[1]}`,
       mustache.render(template, templateData),
@@ -33,5 +45,4 @@ async function main() {
   }
 }
 
-main()
-
+main();

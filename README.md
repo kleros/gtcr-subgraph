@@ -8,3 +8,10 @@
 </p>
 
 This repo defines a subgraph which is used by Curate.
+
+## Dev
+
+To deploy to your own instance on a testnet, modify the script to use your own subgraph instance. For example, change `deploy:kovan` to `graph deploy --product hosted-service <your-username>/curate-kovan`.
+
+To set your access token:
+`npx graph auth --product hosted-service <access-token>`
