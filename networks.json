@@ -1,9 +1,9 @@
 {
   "LightGTCRFactory": {
     "42": {
-      "address": "0x919f4fb77a4239931a550a4bb01d684198dc40c1",
-      "transactionHash": "0x3ea75afd415b4f54449dc402e129a4fd96ec7298fccc48d7d2e44dedf67743ac",
-      "startBlock": 27189031
+      "address": "0xCD8aFA196E355E5E413c7a40423d9c371768E168",
+      "transactionHash": "0x7e8eb00ae5015ecbfbc25d5713167b31fbe18c8c1be28c7319a14f9f8f04ede7",
+      "startBlock": 27204506
     },
     "4": {
       "address": "0x2887de253689f911fd69a6c72120e6b7a25d9d26",
@@ -28,9 +28,9 @@
       "startBlock": 18495616
     },
     "4": {
-      "address": "0xcc1f0ca49a9d622da624bff6a4cd5b32c5276b11",
-      "transactionHash": "0x26667317945f52e2b7e87bc6a621afcfa45f247cdce6f00bbf7a4ce14809ecc0",
-      "startBlock": 6976939
+      "address": "0x6cc238531c535e91f0621a172c3a07da93b299b3",
+      "transactionHash": "0xf6160e8033c9c0b8845898f120b7a3a89905402f00ed1cf1741b927db99e3646",
+      "startBlock": 9291862
     },
     "100": {
       "address": "0x794Cee5a6e1501b633eC13b8c1e327d9860FE039",
