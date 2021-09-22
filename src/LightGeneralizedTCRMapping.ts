@@ -407,11 +407,6 @@ export function handleContribution(event: Contribution): void {
   let roundID = requestID + '-' + roundIndex.toString();
   let round = LRound.load(roundID);
 
-  if (!round) {
-    round = buildNewRound(roundID, request.id, event.block.timestamp);
-    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
-  }
-
   let tcr = LightGeneralizedTCR.bind(event.address);
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
 
