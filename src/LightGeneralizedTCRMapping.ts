@@ -496,7 +496,10 @@ export function handleRequestChallenged(event: Dispute): void {
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
-  let newRoundID = requestID + '-' + requestIndex.toString();
+  let newRoundID =
+    requestID +
+    '-' +
+    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
   let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
 
   // Accounting.
