@@ -660,9 +660,8 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
     i = i.plus(BigInt.fromI32(1))
   ) {
     let contribution = LContribution.load(roundID + '-' + i.toString());
-    if (contribution == null) continue;
-
     // Check if the contribution is from the beneficiary.
+
     if ((contribution.contributor as Address) != event.params._beneficiary)
       continue;
 
