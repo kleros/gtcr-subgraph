@@ -17,6 +17,7 @@ import {
   LRegistry,
   MetaEvidence,
   Arbitrator,
+  LContribution,
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -136,6 +137,8 @@ function buildNewRound(
   newRound.rulingTime = BigInt.fromI32(0);
   newRound.ruling = NONE;
   newRound.creationTime = timestamp;
+  newRound.numberOfContributions = BigInt.fromI32(0);
+  newRound.appealed = false;
   return newRound;
 }
 
@@ -372,6 +375,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   // Note that everything related to the deposit is handled
   // in handleContribution.
   let round = buildNewRound(roundID, requestID, event.block.timestamp);
+  round.numberOfContributions = BigInt.fromI32(1);
 
   // Accounting.
   if (itemInfo.value1.equals(BigInt.fromI32(1))) {
@@ -421,6 +425,9 @@ export function handleContribution(event: Contribution): void {
     // request.value5 is request.numberOfRounds.
     // If there are 2 rounds a dispute was created
     // (i.e. this is the challenge deposit).
+
+    // Note that we don't create a new round here because
+    // it is created in handleRequestChallenged.
     round.amountPaidChallenger = event.params._contribution;
     round.hasPaidChallenger = true;
     round.feeRewards = round.feeRewards
@@ -454,6 +461,7 @@ export function handleContribution(event: Contribution): void {
         request.arbitratorExtraData,
       );
       round.feeRewards = round.feeRewards.minus(appealCost);
+      round.appealed = true;
 
       let newRoundID =
         requestID +
@@ -470,8 +478,21 @@ export function handleContribution(event: Contribution): void {
     }
   }
 
-  request.save();
+  let contributionID = roundID + '-' + round.numberOfContributions.toString();
+  let contribution = new LContribution(contributionID);
+  contribution.round = round.id;
+  contribution.contributor = event.transaction.from;
+  contribution.side = BigInt.fromI32(event.params._side);
+  contribution.withdrawable = false;
+  contribution.contributor = event.params._contributor;
+
+  round.numberOfContributions = round.numberOfContributions.plus(
+    BigInt.fromI32(1),
+  );
+
+  contribution.save();
   round.save();
+  request.save();
 }
 
 export function handleRequestChallenged(event: Dispute): void {
@@ -496,6 +517,9 @@ export function handleRequestChallenged(event: Dispute): void {
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
+  let round = LRound.load(requestID + '-' + '0');
+  round.numberOfContributions = BigInt.fromI32(2);
+
   let newRoundID =
     requestID +
     '-' +
@@ -505,6 +529,7 @@ export function handleRequestChallenged(event: Dispute): void {
   // Accounting.
   updateCounters(previousStatus, newStatus, event.address);
 
+  round.save();
   newRound.save();
   request.save();
   item.save();
@@ -592,18 +617,96 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
 
-  let request = LRequest.load(graphItemID + '-' + requestIndex.toString());
+  let requestID = graphItemID + '-' + requestIndex.toString();
+  let request = LRequest.load(requestID);
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.resolutionTx = event.transaction.hash;
+  // requestInfo.value6 is request.ruling.
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
+
+  // Iterate over every contribution and mark it as withdrawable if it is.
+  // Start from the second round as the first is automatically withdrawn
+  // when the request resolves.
+  for (
+    let i = BigInt.fromI32(1);
+    i.lt(request.numberOfRounds);
+    i = i.plus(BigInt.fromI32(1))
+  ) {
+    // Iterate over every round of the request.
+    let roundID = requestID + '-' + i.toString();
+    let round = LRound.load(roundID);
+    for (
+      let j = BigInt.fromI32(0);
+      j.lt(round.numberOfContributions);
+      j = j.plus(BigInt.fromI32(1))
+    ) {
+      // Iterate over every contribution of the round.
+      let contribution = LContribution.load(roundID + '-' + j.toString());
+
+      if (requestInfo.value6 == 0) {
+        // The final ruling is refuse to rule. There is no winner
+        // or loser so every contribution is withdrawable.
+        contribution.withdrawable = true;
+      } else if (requestInfo.value6 == 1) {
+        // The requester won so only contributions to the requester
+        // are withdrawable.
+        // The only exception is in the case the last round the loser
+        // (challenger in this case) raised some funds but not enough
+        // to be fully funded before the deadline. In this case
+        // the contributors get to withdraw.
+        if (contribution.side == BigInt.fromI32(1)) {
+          contribution.withdrawable = true;
+        } else if (
+          j.equals(round.numberOfContributions.minus(BigInt.fromI32(1)))
+        ) {
+          contribution.withdrawable = true;
+        }
+      } else {
+        // The challenger won so only contributions to the challenger
+        // are withdrawable.
+        // The only exception is in the case the last round the loser
+        // (requester in this case) raised some funds but not enough
+        // to be fully funded before the deadline. In this case
+        // the contributors get to withdraw.
+        if (contribution.side == BigInt.fromI32(2)) {
+          contribution.withdrawable = true;
+        } else if (
+          j.equals(round.numberOfContributions.minus(BigInt.fromI32(1)))
+        ) {
+          contribution.withdrawable = true;
+        }
+      }
+
+      contribution.save();
+    }
+  }
 
   request.save();
   item.save();
 }
 
 export function handleRewardWithdrawn(event: RewardWithdrawn): void {
-  // TODO
+  let graphItemID =
+    event.params._itemID.toHexString() + '@' + event.address.toHexString();
+  let requestID = graphItemID + '-' + event.params._request.toString();
+  let roundID = requestID + '-' + event.params._round.toString();
+  let round = LRound.load(roundID);
+
+  for (
+    let i = BigInt.fromI32(0);
+    i.lt(round.numberOfContributions);
+    i = i.plus(BigInt.fromI32(1))
+  ) {
+    let contribution = LContribution.load(roundID + '-' + i.toString());
+    if (contribution == null) continue;
+
+    // Check if the contribution is from the beneficiary.
+    if ((contribution.contributor as Address) != event.params._beneficiary)
+      continue;
+
+    contribution.withdrawable = false;
+  }
 }
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
