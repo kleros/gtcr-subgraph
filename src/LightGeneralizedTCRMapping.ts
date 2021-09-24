@@ -604,7 +604,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
     updateCounters(previousStatus, newStatus, event.address);
   }
 
-  if (!event.params._updatedDirectly) {
+  if (event.params._updatedDirectly) {
     // Direct actions (e.g. addItemDirectly and removeItemDirectly)
     // don't envolve any requests. Only the item is updated.
     item.save();
