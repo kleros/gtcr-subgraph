@@ -73,6 +73,7 @@ let ACCEPT = 'Accept';
 let REJECT = 'Reject';
 
 let REQUESTER_CODE = 1;
+let CHALLENGER_CODE = 2;
 
 let ABSENT_CODE = 0;
 let REGISTERED_CODE = 1;
@@ -412,70 +413,27 @@ export function handleContribution(event: Contribution): void {
   let round = LRound.load(roundID);
 
   let tcr = LightGeneralizedTCR.bind(event.address);
-  let arbitrator = IArbitrator.bind(request.arbitrator as Address);
-
   let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
-  let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
-  if (!item.disputed) {
-    // This is a requestStatusChange deposit.
-    round.amountPaidRequester = event.params._contribution;
-    round.hasPaidRequester = true;
-    round.feeRewards = round.amountPaidRequester;
-  } else if (requestInfo.value5.equals(BigInt.fromI32(2))) {
-    // request.value5 is request.numberOfRounds.
-    // If there are 2 rounds a dispute was created
-    // (i.e. this is the challenge deposit).
 
-    // Note that we don't create a new round here because
-    // it is created in handleRequestChallenged.
-    round.amountPaidChallenger = event.params._contribution;
-    round.hasPaidChallenger = true;
-    round.feeRewards = round.feeRewards
-      .plus(round.amountPaidChallenger)
-      .minus(arbitrationCost);
-  } else {
-    // Appeal fee contribution
-    if (event.params._side == REQUESTER_CODE) {
-      round.amountPaidRequester = round.amountPaidRequester.plus(
-        event.params._contribution,
-      );
-    } else {
-      round.amountPaidChallenger = round.amountPaidChallenger.plus(
-        event.params._contribution,
-      );
-    }
-    round.feeRewards = round.feeRewards.plus(event.params._contribution);
+  let roundInfo = tcr.getRoundInfo(
+    event.params._itemID,
+    requestIndex,
+    roundIndex,
+  );
+  round.appealed = roundInfo.value0;
+  round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
+  round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
+  round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
+  round.hasPaidRequester = roundInfo.value2[CHALLENGER_CODE];
+  round.feeRewards = roundInfo.value3;
 
-    let roundInfo = tcr.getRoundInfo(
-      event.params._itemID,
-      requestIndex,
-      roundIndex,
-    );
-    // Note: roundInfo.value2 is round.hasPaid
-    round.hasPaidChallenger = roundInfo.value2[2];
-    round.hasPaidRequester = roundInfo.value2[1];
+  if (round.appealed) {
+    let newRoundID =
+      requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
+    let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
+    newRound.save();
 
-    if (round.hasPaidRequester && round.hasPaidChallenger) {
-      let appealCost = arbitrator.appealCost(
-        request.disputeID,
-        request.arbitratorExtraData,
-      );
-      round.feeRewards = round.feeRewards.minus(appealCost);
-      round.appealed = true;
-
-      let newRoundID =
-        requestID +
-        '-' +
-        requestInfo.value5.minus(BigInt.fromI32(1)).toString();
-      let newRound = buildNewRound(
-        newRoundID,
-        request.id,
-        event.block.timestamp,
-      );
-      newRound.save();
-
-      request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
-    }
+    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
   }
 
   let contributionID = roundID + '-' + round.numberOfContributions.toString();
@@ -655,11 +613,14 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         // (challenger in this case) raised some funds but not enough
         // to be fully funded before the deadline. In this case
         // the contributors get to withdraw.
+        //
+        // Side 1: requester
+        // Side 2: challenger
         if (contribution.side == BigInt.fromI32(1)) {
           contribution.withdrawable = true;
-        } else if (
-          j.equals(round.numberOfContributions.minus(BigInt.fromI32(1)))
-        ) {
+        } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
+          // Contribution was made to the challenger (loser) and this
+          // is the last round.
           contribution.withdrawable = true;
         }
       } else {
@@ -671,9 +632,9 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         // the contributors get to withdraw.
         if (contribution.side == BigInt.fromI32(2)) {
           contribution.withdrawable = true;
-        } else if (
-          j.equals(round.numberOfContributions.minus(BigInt.fromI32(1)))
-        ) {
+        } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
+          // Contribution was made to the requester (loser) and this
+          // is the last round.
           contribution.withdrawable = true;
         }
       }
