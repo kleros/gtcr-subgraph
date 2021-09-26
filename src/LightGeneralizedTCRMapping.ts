@@ -72,6 +72,7 @@ let NONE = 'None';
 let ACCEPT = 'Accept';
 let REJECT = 'Reject';
 
+let NO_RULING_CODE = 0;
 let REQUESTER_CODE = 1;
 let CHALLENGER_CODE = 2;
 
@@ -403,22 +404,22 @@ export function handleContribution(event: Contribution): void {
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let item = LItem.load(graphItemID);
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestID = graphItemID + '-' + requestIndex.toString();
+  let requestID = graphItemID + '-' + event.params._requestID.toString();
   let request = LRequest.load(requestID);
 
-  let roundIndex = request.numberOfRounds.minus(BigInt.fromI32(1));
-  let roundID = requestID + '-' + roundIndex.toString();
+  let roundID = requestID + '-' + event.params._roundID.toString();
   let round = LRound.load(roundID);
 
   let tcr = LightGeneralizedTCR.bind(event.address);
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
+  let requestInfo = tcr.getRequestInfo(
+    event.params._itemID,
+    event.params._requestID,
+  );
 
   let roundInfo = tcr.getRoundInfo(
     event.params._itemID,
-    requestIndex,
-    roundIndex,
+    event.params._requestID,
+    event.params._roundID,
   );
   round.appealed = roundInfo.value0;
   round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
@@ -428,12 +429,13 @@ export function handleContribution(event: Contribution): void {
   round.feeRewards = roundInfo.value3;
 
   if (round.appealed) {
+    // requestInfo.value5 is requestInfo.numberOfRounds.
     let newRoundID =
       requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
     let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
     newRound.save();
 
-    request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
+    request.numberOfRounds = requestInfo.value5;
   }
 
   let contributionID = roundID + '-' + round.numberOfContributions.toString();
@@ -602,21 +604,18 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
       // Iterate over every contribution of the round.
       let contribution = LContribution.load(roundID + '-' + j.toString());
 
-      if (requestInfo.value6 == 0) {
+      if (requestInfo.value6 == NO_RULING_CODE) {
         // The final ruling is refuse to rule. There is no winner
         // or loser so every contribution is withdrawable.
         contribution.withdrawable = true;
-      } else if (requestInfo.value6 == 1) {
+      } else if (requestInfo.value6 == REQUESTER_CODE) {
         // The requester won so only contributions to the requester
         // are withdrawable.
         // The only exception is in the case the last round the loser
         // (challenger in this case) raised some funds but not enough
         // to be fully funded before the deadline. In this case
         // the contributors get to withdraw.
-        //
-        // Side 1: requester
-        // Side 2: challenger
-        if (contribution.side == BigInt.fromI32(1)) {
+        if (contribution.side == BigInt.fromI32(REQUESTER_CODE)) {
           contribution.withdrawable = true;
         } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
           // Contribution was made to the challenger (loser) and this
@@ -630,7 +629,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         // (requester in this case) raised some funds but not enough
         // to be fully funded before the deadline. In this case
         // the contributors get to withdraw.
-        if (contribution.side == BigInt.fromI32(2)) {
+        if (contribution.side == BigInt.fromI32(CHALLENGER_CODE)) {
           contribution.withdrawable = true;
         } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
           // Contribution was made to the requester (loser) and this
