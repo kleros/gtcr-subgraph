@@ -665,6 +665,7 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
       continue;
 
     contribution.withdrawable = false;
+    contribution.save();
   }
 }
 
