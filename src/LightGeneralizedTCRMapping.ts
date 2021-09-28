@@ -374,10 +374,9 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
   let roundID = requestID + '-0';
 
-  // Note that everything related to the deposit is handled
-  // in handleContribution.
+  // Note that everything related to the deposit (e.g. contribution creation)
+  // is handled in handleContribution.
   let round = buildNewRound(roundID, requestID, event.block.timestamp);
-  round.numberOfContributions = BigInt.fromI32(1);
 
   // Accounting.
   if (itemInfo.value1.equals(BigInt.fromI32(1))) {
@@ -441,7 +440,6 @@ export function handleContribution(event: Contribution): void {
   let contributionID = roundID + '-' + round.numberOfContributions.toString();
   let contribution = new LContribution(contributionID);
   contribution.round = round.id;
-  contribution.contributor = event.transaction.from;
   contribution.side = BigInt.fromI32(event.params._side);
   contribution.withdrawable = false;
   contribution.contributor = event.params._contributor;
@@ -478,7 +476,6 @@ export function handleRequestChallenged(event: Dispute): void {
   request.disputeID = event.params._disputeID;
 
   let round = LRound.load(requestID + '-' + '0');
-  round.numberOfContributions = BigInt.fromI32(2);
 
   let newRoundID =
     requestID +
@@ -661,7 +658,10 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
     let contribution = LContribution.load(roundID + '-' + i.toString());
     // Check if the contribution is from the beneficiary.
 
-    if ((contribution.contributor as Address) != event.params._beneficiary)
+    if (
+      contribution.contributor.toHexString() !=
+      event.params._beneficiary.toHexString()
+    )
       continue;
 
     contribution.withdrawable = false;
