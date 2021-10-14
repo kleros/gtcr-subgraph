@@ -352,16 +352,6 @@
         "internalType": "bytes",
         "name": "arbitratorExtraData",
         "type": "bytes"
-      },
-      {
-        "internalType": "string",
-        "name": "registrationMetaEvidence",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "clearingMetaEvidence",
-        "type": "string"
       }
     ],
     "payable": false,
@@ -745,6 +735,11 @@
         "internalType": "uint256",
         "name": "numberOfRequests",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "sumDeposit",
+        "type": "uint256"
       }
     ],
     "payable": false,
@@ -1063,14 +1058,14 @@
         "type": "uint8"
       },
       {
-        "internalType": "uint232",
+        "internalType": "uint128",
         "name": "sumDeposit",
-        "type": "uint232"
+        "type": "uint128"
       },
       {
-        "internalType": "uint16",
+        "internalType": "uint120",
         "name": "requestCount",
-        "type": "uint16"
+        "type": "uint120"
       }
     ],
     "payable": false,
@@ -1214,9 +1209,14 @@
         "type": "uint8"
       },
       {
-        "internalType": "uint240",
+        "internalType": "uint224",
         "name": "disputeID",
-        "type": "uint240"
+        "type": "uint224"
+      },
+      {
+        "internalType": "uint16",
+        "name": "roundCount",
+        "type": "uint16"
       }
     ],
     "payable": false,

@@ -1,9 +1,9 @@
 {
   "LightGTCRFactory": {
     "42": {
-      "address": "0x892ce6e583edbb2f11aa7417d0b58249c76e446e",
-      "transactionHash": "0x77030e32f286c5e02c3c2566b6d807f605b6b661b393a91eb35dfd49129def34",
-      "startBlock": 27644580
+      "address": "0xF937B56339eD589768fc2eaE5c11320b50a97329",
+      "transactionHash": "0xd292793392e78a5aeeebf7519dd54f83967b32e3d3b0e285e66e7cd64594826b",
+      "startBlock": 27711172
     }
   },
   "GTCRFactory": {
