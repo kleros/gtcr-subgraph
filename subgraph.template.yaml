@@ -25,27 +25,6 @@ dataSources:
         - event: NewGTCR(indexed address)
           handler: handleNewGTCR
       file: ./src/LightGTCRFactoryMapping.ts
-  - kind: ethereum/contract
-    name: GTCRFactory
-    network: {{network}}
-    source:
-      address: '{{GTCRFactory.address}}'
-      abi: GTCRFactory
-      startBlock: {{GTCRFactory.startBlock}}
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.3
-      language: wasm/assemblyscript
-      entities:
-        - Registry
-        - MetaEvidence
-      abis:
-        - name: GTCRFactory
-          file: ./abis/GTCRFactory.json
-      eventHandlers:
-        - event: NewGTCR(indexed address)
-          handler: handleNewGTCR
-      file: ./src/GTCRFactoryMapping.ts
 templates:
   - kind: ethereum/contract
     name: LightGeneralizedTCR

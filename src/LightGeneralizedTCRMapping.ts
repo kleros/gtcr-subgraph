@@ -247,7 +247,7 @@ function JSONValueToBool(
     case JSONValueKind.BOOL:
       return value.toBool();
     case JSONValueKind.STRING:
-      return value.toString() === 'true';
+      return value.toString() == 'true';
     case JSONValueKind.NUMBER:
       return value.toBigInt().notEqual(BigInt.fromString('0'));
     default:
@@ -415,17 +415,27 @@ export function handleContribution(event: Contribution): void {
     event.params._requestID,
   );
 
-  let roundInfo = tcr.getRoundInfo(
-    event.params._itemID,
-    event.params._requestID,
-    event.params._roundID,
-  );
-  round.appealed = roundInfo.value0;
-  round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
-  round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
-  round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
-  round.hasPaidRequester = roundInfo.value2[CHALLENGER_CODE];
-  round.feeRewards = roundInfo.value3;
+  if (event.params._roundID == BigInt.fromI32(0)) {
+    if (event.params._side == 1) {
+      round.amountPaidRequester = event.params._contribution;
+      round.hasPaidRequester = true;
+    } else {
+      round.amountPaidChallenger = event.params._contribution;
+      round.hasPaidChallenger = true;
+    }
+  } else {
+    let roundInfo = tcr.getRoundInfo(
+      event.params._itemID,
+      event.params._requestID,
+      event.params._roundID.minus(BigInt.fromI32(1)),
+    );
+    round.appealed = roundInfo.value0;
+    round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
+    round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
+    round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
+    round.hasPaidRequester = roundInfo.value2[CHALLENGER_CODE];
+    round.feeRewards = roundInfo.value3;
+  }
 
   if (round.appealed) {
     // requestInfo.value5 is requestInfo.numberOfRounds.
@@ -475,8 +485,6 @@ export function handleRequestChallenged(event: Dispute): void {
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
-  let round = LRound.load(requestID + '-' + '0');
-
   let newRoundID =
     requestID +
     '-' +
@@ -486,7 +494,6 @@ export function handleRequestChallenged(event: Dispute): void {
   // Accounting.
   updateCounters(previousStatus, newStatus, event.address);
 
-  round.save();
   newRound.save();
   request.save();
   item.save();
