@@ -90,9 +90,14 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
 
   let itemInfo = tcr.getItemInfo(event.params._itemID);
-  let item = Item.load(graphItemID);
   let registry = Registry.load(event.address.toHexString());
-  if (item == null) {
+  if (!registry) {
+    log.error(`Registry at {} not found.`, [event.address.toHexString()]);
+    return;
+  }
+
+  let item = Item.load(graphItemID);
+  if (!item) {
     item = new Item(graphItemID);
     item.itemID = event.params._itemID;
     item.data = itemInfo.value0;
@@ -190,9 +195,13 @@ export function handleRequestResolved(event: ItemStatusChange): void {
     event.params._requestIndex,
   );
 
-  let request = Request.load(
-    graphItemID + '-' + event.params._requestIndex.toString(),
-  );
+  let requestID = graphItemID + '-' + event.params._requestIndex.toString();
+  let request = Request.load(requestID);
+  if (!request) {
+    log.error(`Request of requestID {} not found.`, [requestID]);
+    return;
+  }
+
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
@@ -208,6 +217,11 @@ export function handleRequestChallenged(event: Dispute): void {
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = Item.load(graphItemID);
+  if (!item) {
+    log.error(`Item of graphItemID {} not found`, [graphItemID]);
+    return;
+  }
+
   item.disputed = true;
   item.latestChallenger = event.transaction.from;
 
@@ -215,6 +229,11 @@ export function handleRequestChallenged(event: Dispute): void {
   let requestID =
     graphItemID + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString();
   let request = Request.load(requestID);
+  if (!request) {
+    log.error(`Request of requestID {} not found.`, [requestID]);
+    return;
+  }
+
   request.disputed = true;
   request.challenger = event.transaction.from;
   request.numberOfRounds = BigInt.fromI32(2);
@@ -227,6 +246,11 @@ export function handleRequestChallenged(event: Dispute): void {
   let roundID =
     requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString();
   let round = Round.load(roundID);
+  if (!round) {
+    log.error(`Request of requestID {} not found.`, [roundID]);
+    return;
+  }
+
   let arbitrator = IArbitrator.bind(request.arbitrator as Address);
   let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
   if (request.requestType == REGISTRATION_REQUESTED)
@@ -267,6 +291,11 @@ export function handleAppealContribution(event: AppealContribution): void {
 
   let roundID = requestID + '-' + event.params._round.toString();
   let round = Round.load(roundID);
+  if (!round) {
+    log.error(`Round of roundID {} not found.`, [roundID]);
+    return;
+  }
+
   if (event.params._side == REQUESTER_CODE) {
     round.amountPaidRequester = round.amountPaidRequester.plus(
       event.params._amount,
@@ -307,6 +336,11 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
   );
   let roundID = requestID + '-' + event.params._round.toString();
   let round = Round.load(roundID);
+  if (!round) {
+    log.error(`Round of roundID {} not found.`, [roundID]);
+    return;
+  }
+
   if (event.params._side == REQUESTER_CODE) {
     round.hasPaidRequester = true;
   } else {
@@ -314,9 +348,13 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
   }
 
   if (round.hasPaidRequester && round.hasPaidChallenger) {
-    let request = Request.load(
-      graphItemID + '-' + event.params._request.toString(),
-    );
+    let requestID = graphItemID + '-' + event.params._request.toString();
+    let request = Request.load(requestID);
+    if (!request) {
+      log.error(`Request of requestID {} not found.`, [requestID]);
+      return;
+    }
+
     let arbitrator = IArbitrator.bind(request.arbitrator as Address);
     let appealCost = arbitrator.appealCost(
       request.disputeID,
@@ -337,6 +375,10 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   let registry = Registry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`Registry at {} not found`, [event.address.toHexString()]);
+    return;
+  }
 
   registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
     BigInt.fromI32(1),
@@ -392,16 +434,28 @@ export function handleAppealPossible(event: AppealPossible): void {
   let graphItemID =
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = Item.load(graphItemID);
+  if (!item) {
+    log.error('Item of graphItemID {} not found.', [graphItemID]);
+    return;
+  }
 
-  let request = Request.load(
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString(),
-  );
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = Request.load(requestID);
+  if (!request) {
+    log.error(`Request of requestID {} not found.`, [requestID]);
+    return;
+  }
 
-  let round = Round.load(
+  let roundID =
     request.id +
-      '-' +
-      request.numberOfRounds.minus(BigInt.fromI32(1)).toString(),
-  );
+    '-' +
+    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+  let round = Round.load(roundID);
+  if (!round) {
+    log.error(`Round of roundID {} not found.`, [roundID]);
+    return;
+  }
 
   let arbitrator = IArbitrator.bind(event.address);
   let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);

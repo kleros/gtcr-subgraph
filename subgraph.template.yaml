@@ -13,11 +13,11 @@ dataSources:
       startBlock: {{LightGTCRFactory.startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.4
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
       entities:
-        - LRegistry
         - MetaEvidence
+        - LRegistry
       abis:
         - name: LightGTCRFactory
           file: ./abis/LightGTCRFactory.json
@@ -33,13 +33,18 @@ templates:
       abi: LightGeneralizedTCR
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.3
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
       entities:
         - LItem
-        - Request
-        - Round
-        - Contribution
+        - LItem,
+        - ItemProp,
+        - LRequest,
+        - LRound,
+        - LRegistry,
+        - MetaEvidence,
+        - Arbitrator,
+        - LContribution,
       abis:
         - name: LightGeneralizedTCR
           file: ./abis/LightGeneralizedTCR.json
@@ -68,9 +73,10 @@ templates:
       abi: IArbitrator
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.3
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
-      entities: []
+      entities: 
+        - Arbitrator
       abis:
         - name: IArbitrator
           file: ./abis/IArbitrator.json
@@ -87,13 +93,15 @@ templates:
       abi: GeneralizedTCR
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.3
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
       entities:
         - Item
         - Request
         - Round
-        - Contribution
+        - Registry
+        - MetaEvidence
+        - Arbitrator
       abis:
         - name: GeneralizedTCR
           file: ./abis/GeneralizedTCR.json
@@ -120,9 +128,15 @@ templates:
       abi: IArbitrator
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.3
+      apiVersion: 0.0.5
       language: wasm/assemblyscript
-      entities: []
+      entities: 
+        - Item
+        - Request
+        - Round
+        - Registry
+        - MetaEvidence
+        - Arbitrator
       abis:
         - name: IArbitrator
           file: ./abis/IArbitrator.json

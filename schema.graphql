@@ -81,7 +81,7 @@ type LItem @entity {
   "The data describing the item."
   data: String!
   "The parsed data describing the item."
-  props: [ItemProp]! @derivedFrom(field: "item")
+  props: [ItemProp!]! @derivedFrom(field: "item")
   "The item identifiers combined as a single string."
   keywords: String
   "The current status of the item."

@@ -160,6 +160,11 @@ function updateCounters(
   registryAddress: Address,
 ): void {
   let registry = LRegistry.load(registryAddress.toHexString());
+  if (!registry) {
+    log.error(`LRegistry at {} not found.`, [registryAddress.toHexString()]);
+    return;
+  }
+
   if (previousStatus == ABSENT_CODE) {
     registry.numberOfAbsent = registry.numberOfAbsent.minus(BigInt.fromI32(1));
   } else if (previousStatus == REGISTERED_CODE) {
@@ -217,10 +222,10 @@ let ZERO_ADDRESS = Bytes.fromHexString(
 
 function JSONValueToMaybeString(
   value: JSONValue | null,
-  _default: string | null = '',
-): string | null {
+  _default: string = '',
+): string {
   if (value == null || value.isNull()) {
-    return null;
+    return '';
   }
 
   switch (value.kind) {
@@ -266,6 +271,11 @@ export function handleNewItem(event: NewItem): void {
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let gtcrContract = LightGeneralizedTCR.bind(event.address);
   let registry = LRegistry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`LRegistry {} not found`, [event.address.toHexString()]);
+    return;
+  }
+
   let itemInfo = gtcrContract.getItemInfo(event.params._itemID);
 
   let item = new LItem(graphItemID);
@@ -283,40 +293,95 @@ export function handleNewItem(event: NewItem): void {
   item.keywords = event.address.toHexString();
 
   let jsonStr = ipfs.cat(item.data);
-  if (jsonStr != null) {
-    let jsonObj = json.fromBytes(jsonStr as Bytes).toObject();
-    let columns = jsonObj.get('columns').toArray();
-    let values = jsonObj.get('values').toObject();
-
-    for (let i = 0; i < columns.length; i++) {
-      let col = columns[i];
-      let colObj = col.toObject();
-
-      let label = colObj.get('label');
-
-      let description = colObj.get('description');
-      let _type = colObj.get('type');
-      let isIdentifier = colObj.get('isIdentifier');
-
-      let value = values.get(label.toString());
-
-      let itemPropId = graphItemID + '@' + label.toString();
-      let itemProp = new ItemProp(itemPropId);
-      itemProp.type = JSONValueToMaybeString(_type);
-      itemProp.label = JSONValueToMaybeString(label);
-      itemProp.description = JSONValueToMaybeString(description);
-      itemProp.isIdentifier = JSONValueToBool(isIdentifier);
-      itemProp.value = JSONValueToMaybeString(value);
-      itemProp.item = item.id;
-
-      if (itemProp.isIdentifier && itemProp.value != null) {
-        item.keywords = item.keywords + ' | ' + itemProp.value;
-      }
-
-      itemProp.save();
-    }
-  } else {
+  if (!jsonStr) {
     log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
+    item.save();
+    registry.save();
+    return;
+  }
+
+  let jsonObjValue = json.fromBytes(jsonStr as Bytes);
+  if (!jsonObjValue) {
+    log.error(`Error getting json object value for graphItemID {}`, [
+      graphItemID,
+    ]);
+    return;
+  }
+  let jsonObj = jsonObjValue.toObject();
+  if (!jsonObj) {
+    log.error(`Error converting object for graphItemID {}`, [graphItemID]);
+    return;
+  }
+
+  let columnsValue = jsonObj.get('columns');
+  if (!columnsValue) {
+    log.error(`Error getting column values for graphItemID {}`, [graphItemID]);
+    return;
+  }
+  let columns = columnsValue.toArray();
+
+  let valuesValue = jsonObj.get('values');
+  if (!valuesValue) {
+    log.error(`Error getting valuesValue for graphItemID {}`, [graphItemID]);
+    return;
+  }
+  let values = valuesValue.toObject();
+
+  for (let i = 0; i < columns.length; i++) {
+    let col = columns[i];
+    let colObj = col.toObject();
+
+    let label = colObj.get('label');
+    let description = colObj.get('description');
+    let _type = colObj.get('type');
+    let isIdentifier = colObj.get('isIdentifier');
+
+    if (!label) {
+      log.error(`label not found for graphItemID {}`, [graphItemID]);
+      return;
+    }
+    if (!description) {
+      log.error(`description not found for graphItemID {}`, [graphItemID]);
+      return;
+    }
+    if (!_type) {
+      log.error(`_type not found for graphItemID {}`, [graphItemID]);
+      return;
+    }
+    if (!isIdentifier) {
+      log.error(`isIdentifier not found for graphItemID {}`, [graphItemID]);
+      return;
+    }
+    let value = values.get(label.toString());
+    if (!value) {
+      log.error(`value not found for graphItemID {}`, [graphItemID]);
+      return;
+    }
+
+    let itemPropId = graphItemID + '@' + label.toString();
+    let itemProp = new ItemProp(itemPropId);
+    itemProp.type = JSONValueToMaybeString(_type);
+    itemProp.label = JSONValueToMaybeString(label);
+    itemProp.description = JSONValueToMaybeString(description);
+    itemProp.isIdentifier = JSONValueToBool(isIdentifier);
+    itemProp.value = JSONValueToMaybeString(value);
+    itemProp.item = item.id;
+
+    if (!itemProp.value) {
+      log.error(`Missing itemProp.value for graphItemID {}`, [graphItemID]);
+      return;
+    }
+
+    if (!item.keywords) {
+      log.error(`Missing item.keywords for graphItemID {}`, [graphItemID]);
+      return;
+    }
+
+    if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
+      item.keywords = item.keywords + ' | ' + (itemProp.value as string);
+    }
+
+    itemProp.save();
   }
 
   item.save();
@@ -330,7 +395,18 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let tcr = LightGeneralizedTCR.bind(event.address);
   let itemInfo = tcr.getItemInfo(event.params._itemID);
   let item = LItem.load(graphItemID);
+  if (!item) {
+    log.error(`LItem for graphItemID {} not found.`, [graphItemID]);
+    return;
+  }
+
   let registry = LRegistry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`LRegistry at address {} not found`, [
+      event.address.toHexString(),
+    ]);
+    return;
+  }
 
   // `previousStatus` and `newStatus` are used for accounting.
   // Note that if this is the very first request of an item,
@@ -405,16 +481,19 @@ export function handleContribution(event: Contribution): void {
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let requestID = graphItemID + '-' + event.params._requestID.toString();
   let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} no found.`, [requestID]);
+    return;
+  }
 
   let roundID = requestID + '-' + event.params._roundID.toString();
   let round = LRound.load(roundID);
+  if (!round) {
+    log.error(`LRound {} not found.`, [roundID]);
+    return;
+  }
 
   let tcr = LightGeneralizedTCR.bind(event.address);
-  let requestInfo = tcr.getRequestInfo(
-    event.params._itemID,
-    event.params._requestID,
-  );
-
   if (event.params._roundID == BigInt.fromI32(0)) {
     if (event.params._side == 1) {
       round.amountPaidRequester = event.params._contribution;
@@ -437,13 +516,17 @@ export function handleContribution(event: Contribution): void {
     round.feeRewards = roundInfo.value3;
   }
 
+  let requestInfo = tcr.getRequestInfo(
+    event.params._itemID,
+    event.params._requestID,
+  );
   if (round.appealed) {
+    // ERROR: NOT a boolean
     // requestInfo.value5 is requestInfo.numberOfRounds.
     let newRoundID =
       requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
     let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
     newRound.save();
-
     request.numberOfRounds = requestInfo.value5;
   }
 
@@ -471,6 +554,10 @@ export function handleRequestChallenged(event: Dispute): void {
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = LItem.load(graphItemID);
+  if (!item) {
+    log.warning(`LItem {} not found.`, [graphItemID]);
+    return;
+  }
 
   let previousStatus = getExtendedStatus(item.disputed, item.status);
   item.disputed = true;
@@ -480,6 +567,11 @@ export function handleRequestChallenged(event: Dispute): void {
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} not found.`, [requestID]);
+    return;
+  }
+
   request.disputed = true;
   request.challenger = event.transaction.from;
   request.numberOfRounds = BigInt.fromI32(2);
@@ -511,16 +603,28 @@ export function handleAppealPossible(event: AppealPossible): void {
   let graphItemID =
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = LItem.load(graphItemID);
+  if (!item) {
+    log.error(`LItem {} not found.`, [graphItemID]);
+    return;
+  }
 
-  let request = LRequest.load(
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString(),
-  );
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} not found.`, [requestID]);
+    return;
+  }
 
-  let round = LRound.load(
+  let roundID =
     request.id +
-      '-' +
-      request.numberOfRounds.minus(BigInt.fromI32(1)).toString(),
-  );
+    '-' +
+    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+  let round = LRound.load(roundID);
+  if (!round) {
+    log.error(`LRound {} not found.`, [roundID]);
+    return;
+  }
 
   let arbitrator = IArbitrator.bind(event.address);
   let appealPeriod = arbitrator.appealPeriod(event.params._disputeID);
@@ -556,6 +660,10 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let item = LItem.load(graphItemID);
+  if (!item) {
+    log.error(`LItem {} not found.`, [graphItemID]);
+    return;
+  }
 
   // We take the previous and new extended statuses for accounting purposes.
   let previousStatus = getExtendedStatus(item.disputed, item.status);
@@ -583,6 +691,11 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
 
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} not found.`, [requestID]);
+    return;
+  }
+
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.resolutionTx = event.transaction.hash;
@@ -600,13 +713,23 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
     // Iterate over every round of the request.
     let roundID = requestID + '-' + i.toString();
     let round = LRound.load(roundID);
+    if (!round) {
+      log.error(`LRound {} not found.`, [roundID]);
+      return;
+    }
+
     for (
       let j = BigInt.fromI32(0);
       j.lt(round.numberOfContributions);
       j = j.plus(BigInt.fromI32(1))
     ) {
       // Iterate over every contribution of the round.
-      let contribution = LContribution.load(roundID + '-' + j.toString());
+      let contributionID = roundID + '-' + j.toString();
+      let contribution = LContribution.load(contributionID);
+      if (!contribution) {
+        log.error(`LContribution {} not found.`, [contributionID]);
+        return;
+      }
 
       if (requestInfo.value6 == NO_RULING_CODE) {
         // The final ruling is refuse to rule. There is no winner
@@ -656,13 +779,22 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
   let requestID = graphItemID + '-' + event.params._request.toString();
   let roundID = requestID + '-' + event.params._round.toString();
   let round = LRound.load(roundID);
+  if (!round) {
+    log.error(`LRound {} not found.`, [roundID]);
+    return;
+  }
 
   for (
     let i = BigInt.fromI32(0);
     i.lt(round.numberOfContributions);
     i = i.plus(BigInt.fromI32(1))
   ) {
-    let contribution = LContribution.load(roundID + '-' + i.toString());
+    let contributionID = roundID + '-' + i.toString();
+    let contribution = LContribution.load(contributionID);
+    if (!contribution) {
+      log.error(`LContribution {} not found.`, [contributionID]);
+      return;
+    }
     // Check if the contribution is from the beneficiary.
 
     if (
@@ -678,6 +810,10 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   let registry = LRegistry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [event.address.toHexString()]);
+    return;
+  }
 
   registry.metaEvidenceCount = registry.metaEvidenceCount.plus(
     BigInt.fromI32(1),
