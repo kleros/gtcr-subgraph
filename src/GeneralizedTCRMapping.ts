@@ -138,7 +138,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   let roundID = requestID + '-0';
   let round = new Round(roundID);
 
-  let arbitrator = IArbitrator.bind(request.arbitrator as Address);
+  let arbitrator = IArbitrator.bind(changetype<Address>(request.arbitrator));
   if (request.requestType == REGISTRATION_REQUESTED) {
     round.amountPaidRequester = tcr
       .submissionBaseDeposit()
@@ -251,7 +251,7 @@ export function handleRequestChallenged(event: Dispute): void {
     return;
   }
 
-  let arbitrator = IArbitrator.bind(request.arbitrator as Address);
+  let arbitrator = IArbitrator.bind(changetype<Address>(request.arbitrator));
   let arbitrationCost = arbitrator.arbitrationCost(request.arbitratorExtraData);
   if (request.requestType == REGISTRATION_REQUESTED)
     round.amountPaidChallenger = tcr
@@ -355,7 +355,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
       return;
     }
 
-    let arbitrator = IArbitrator.bind(request.arbitrator as Address);
+    let arbitrator = IArbitrator.bind(changetype<Address>(request.arbitrator));
     let appealCost = arbitrator.appealCost(
       request.disputeID,
       request.arbitratorExtraData,
