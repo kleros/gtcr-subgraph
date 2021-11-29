@@ -92,6 +92,8 @@ type LItem @entity {
   numberOfRequests: BigInt!
   "The registry where this item was submitted."
   registry: LRegistry!
+  "The address of the registry this item was submitted. Redundant with registry field to allow use in conditionals."
+  registryAddress: Bytes!
   "Time when the latest request was made."
   latestRequestSubmissionTime: BigInt!
   "The time the latest request was resolved."
@@ -157,6 +159,8 @@ type LRequest @entity {
   item: LItem!
   "The registry where this request was submitted."
   registry: LRegistry!
+  "The address of the registry this item was submitted. Redundant with registry field to allow use in conditionals."
+  registryAddress: Bytes!
   "The time the request was resolved."
   resolutionTime: BigInt!
   "The hash of the transaction that created this request."
@@ -251,6 +255,8 @@ type Item @entity {
   numberOfRequests: BigInt!
   "The registry where this item was submitted."
   registry: Registry!
+  "The address of the registry this item was submitted. Redundant with registry field to allow use in conditionals."
+  registryAddress: Bytes!
   "Time when the latest request was made."
   latestRequestSubmissionTime: BigInt!
   "The time the latest request was resolved."
@@ -298,6 +304,8 @@ type Request @entity {
   item: Item!
   "The registry where this request was submitted."
   registry: Registry!
+  "The address of the registry this item was submitted. Redundant with registry field to allow use in conditionals."
+  registryAddress: Bytes!
   "The time the request was resolved."
   resolutionTime: BigInt!
 }

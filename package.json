@@ -15,7 +15,7 @@
     "publish:xdai": "yarn build:xdai && graph deploy --product hosted-service eccentricexit/curate-xdai-ii",
     "codegen:mainnet": "node render-templates.js mainnet && graph codegen && yarn fix-schema.ts",
     "build:mainnet": "yarn codegen:mainnet && graph build",
-    "publish:mainnet": "yarn build:mainnet && graph deploy --product hosted-service eccentricexit/light-curate-mainnet",
+    "publish:mainnet": "yarn build:mainnet && graph deploy --product hosted-service kleros/curate",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
     "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",

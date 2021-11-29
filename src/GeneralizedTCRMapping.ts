@@ -103,6 +103,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
     item.data = itemInfo.value0;
     item.numberOfRequests = BigInt.fromI32(1);
     item.registry = registry.id;
+    item.registryAddress = event.address;
     item.disputed = false;
     registry.numberOfItems = registry.numberOfItems.plus(BigInt.fromI32(1));
   } else {
@@ -125,6 +126,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.requester = event.transaction.from;
   request.item = item.id;
   request.registry = registry.id;
+  request.registryAddress = event.address;
   request.resolutionTime = BigInt.fromI32(0);
 
   request.disputeOutcome = NONE;

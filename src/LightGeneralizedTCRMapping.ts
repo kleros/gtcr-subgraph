@@ -283,6 +283,7 @@ export function handleNewItem(event: NewItem): void {
   item.data = event.params._data;
   item.numberOfRequests = BigInt.fromI32(0);
   item.registry = registry.id;
+  item.registryAddress = event.address;
   item.disputed = false;
   item.status = getStatus(itemInfo.value0);
   item.latestRequester = ZERO_ADDRESS;
@@ -435,6 +436,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.requester = event.transaction.from;
   request.item = item.id;
   request.registry = registry.id;
+  request.registryAddress = event.address;
   request.resolutionTime = BigInt.fromI32(0);
   request.disputeOutcome = NONE;
   request.resolved = false;
