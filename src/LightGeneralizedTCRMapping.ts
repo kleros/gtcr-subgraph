@@ -349,10 +349,6 @@ export function handleNewItem(event: NewItem): void {
       log.error(`_type not found for graphItemID {}`, [graphItemID]);
       return;
     }
-    if (!isIdentifier) {
-      log.error(`isIdentifier not found for graphItemID {}`, [graphItemID]);
-      return;
-    }
     let value = values.get(label.toString());
     if (!value) {
       log.error(`value not found for graphItemID {}`, [graphItemID]);
