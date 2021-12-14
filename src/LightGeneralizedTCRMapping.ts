@@ -222,10 +222,18 @@ let ZERO_ADDRESS = Bytes.fromHexString(
 
 function JSONValueToMaybeString(
   value: JSONValue | null,
-  _default: string = '',
+  _default: string = '-',
 ): string {
+  // Subgraph considers an empty string to be null and
+  // the handler crashes when attempting to save the entity.
+  // This is a security vulnerability because an adversary
+  // could manually craft an item with missing columns
+  // and the item would not show up in the UI, passing
+  // the challenge period unoticed.
+  //
+  // We fix this by setting the field manually to a hifen.
   if (value == null || value.isNull()) {
-    return '';
+    return '-';
   }
 
   switch (value.kind) {
@@ -261,9 +269,11 @@ function JSONValueToBool(
 }
 
 export function handleNewItem(event: NewItem): void {
-  // We assume this is an item added via addItemDirectly.
-  // If it was emitted via addItem, all the missing/wrong data
-  // will be set in handleRequestSubmitted.
+  // We assume this is an item added via addItemDirectly and care
+  // only about saving the item json data.
+  // If it was emitted via addItem, all the missing/wrong data regarding
+  // things like submission time, arbitrator and deposit will be set in
+  // handleRequestSubmitted.
   //
   // Accounting for items added or removed directly is done
   // inside handleStatusUpdated.
@@ -293,6 +303,10 @@ export function handleNewItem(event: NewItem): void {
 
   item.keywords = event.address.toHexString();
 
+  // Offchain item data could be unavailable. We cannot let
+  // this handler fail otherwise an item would pass the challenge
+  // period unnoticed. Instead we set dummy data so challengers
+  // have a chance to check this.
   let jsonStr = ipfs.cat(item.data);
   if (!jsonStr) {
     log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
@@ -306,17 +320,24 @@ export function handleNewItem(event: NewItem): void {
     log.error(`Error getting json object value for graphItemID {}`, [
       graphItemID,
     ]);
+    item.save();
+    registry.save();
     return;
   }
+
   let jsonObj = jsonObjValue.toObject();
   if (!jsonObj) {
     log.error(`Error converting object for graphItemID {}`, [graphItemID]);
+    item.save();
+    registry.save();
     return;
   }
 
   let columnsValue = jsonObj.get('columns');
   if (!columnsValue) {
     log.error(`Error getting column values for graphItemID {}`, [graphItemID]);
+    item.save();
+    registry.save();
     return;
   }
   let columns = columnsValue.toArray();
@@ -324,6 +345,8 @@ export function handleNewItem(event: NewItem): void {
   let valuesValue = jsonObj.get('values');
   if (!valuesValue) {
     log.error(`Error getting valuesValue for graphItemID {}`, [graphItemID]);
+    item.save();
+    registry.save();
     return;
   }
   let values = valuesValue.toObject();
@@ -333,46 +356,25 @@ export function handleNewItem(event: NewItem): void {
     let colObj = col.toObject();
 
     let label = colObj.get('label');
+
+    // We must account for items with missing fields.
+    let checkedLabel = label
+      ? label.toString()
+      : 'missing-label'.concat(i.toString());
+
     let description = colObj.get('description');
     let _type = colObj.get('type');
     let isIdentifier = colObj.get('isIdentifier');
-
-    if (!label) {
-      log.error(`label not found for graphItemID {}`, [graphItemID]);
-      return;
-    }
-    if (!description) {
-      log.error(`description not found for graphItemID {}`, [graphItemID]);
-      return;
-    }
-    if (!_type) {
-      log.error(`_type not found for graphItemID {}`, [graphItemID]);
-      return;
-    }
-    let value = values.get(label.toString());
-    if (!value) {
-      log.error(`value not found for graphItemID {}`, [graphItemID]);
-      return;
-    }
-
-    let itemPropId = graphItemID + '@' + label.toString();
+    let value = values.get(checkedLabel);
+    let itemPropId = graphItemID + '@' + checkedLabel;
     let itemProp = new ItemProp(itemPropId);
+
+    itemProp.value = JSONValueToMaybeString(value);
     itemProp.type = JSONValueToMaybeString(_type);
     itemProp.label = JSONValueToMaybeString(label);
     itemProp.description = JSONValueToMaybeString(description);
     itemProp.isIdentifier = JSONValueToBool(isIdentifier);
-    itemProp.value = JSONValueToMaybeString(value);
     itemProp.item = item.id;
-
-    if (!itemProp.value) {
-      log.error(`Missing itemProp.value for graphItemID {}`, [graphItemID]);
-      return;
-    }
-
-    if (!item.keywords) {
-      log.error(`Missing item.keywords for graphItemID {}`, [graphItemID]);
-      return;
-    }
 
     if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
       item.keywords = item.keywords + ' | ' + (itemProp.value as string);
