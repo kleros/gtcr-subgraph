@@ -351,6 +351,7 @@ export function handleNewItem(event: NewItem): void {
   }
   let values = valuesValue.toObject();
 
+  let identifier = 0
   for (let i = 0; i < columns.length; i++) {
     let col = columns[i];
     let colObj = col.toObject();
@@ -375,6 +376,15 @@ export function handleNewItem(event: NewItem): void {
     itemProp.description = JSONValueToMaybeString(description);
     itemProp.isIdentifier = JSONValueToBool(isIdentifier);
     itemProp.item = item.id;
+
+    if (itemProp.isIdentifier) {
+      if (identifier == 0) item.key0 = itemProp.value
+      else if (identifier == 1) item.key1 = itemProp.value
+      else if (identifier == 2) item.key2 = itemProp.value
+      else if (identifier == 3) item.key3 = itemProp.value
+      else if (identifier == 4) item.key4 = itemProp.value
+      identifier += 1
+    }
 
     if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
       item.keywords = item.keywords + ' | ' + (itemProp.value as string);
