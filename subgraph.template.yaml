@@ -86,6 +86,8 @@ templates:
           handler: handleRewardWithdrawn
         - event: MetaEvidence(indexed uint256,string)
           handler: handleMetaEvidence
+        - event: Evidence(indexed address,indexed uint256,indexed address,string)
+          handler: handleEvidence
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator
@@ -96,7 +98,7 @@ templates:
       kind: ethereum/events
       apiVersion: 0.0.5
       language: wasm/assemblyscript
-      entities: 
+      entities:
         - Arbitrator
       abis:
         - name: IArbitrator
@@ -151,7 +153,7 @@ templates:
       kind: ethereum/events
       apiVersion: 0.0.5
       language: wasm/assemblyscript
-      entities: 
+      entities:
         - Item
         - Request
         - Round
