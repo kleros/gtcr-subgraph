@@ -16,6 +16,8 @@ import {
   LRound,
   LRegistry,
   MetaEvidence,
+  LEvidence,
+  EvidenceGroupIDToLRequest,
   Arbitrator,
   LContribution,
 } from '../generated/schema';
@@ -31,6 +33,7 @@ import {
   ItemStatusChange,
   RequestSubmitted,
   MetaEvidence as MetaEvidenceEvent,
+  Evidence as EvidenceEvent,
   NewItem,
   RewardWithdrawn,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
@@ -351,6 +354,7 @@ export function handleNewItem(event: NewItem): void {
   }
   let values = valuesValue.toObject();
 
+  let identifier = 0
   for (let i = 0; i < columns.length; i++) {
     let col = columns[i];
     let colObj = col.toObject();
@@ -375,6 +379,15 @@ export function handleNewItem(event: NewItem): void {
     itemProp.description = JSONValueToMaybeString(description);
     itemProp.isIdentifier = JSONValueToBool(isIdentifier);
     itemProp.item = item.id;
+
+    if (itemProp.isIdentifier) {
+      if (identifier == 0) item.key0 = itemProp.value
+      else if (identifier == 1) item.key1 = itemProp.value
+      else if (identifier == 2) item.key2 = itemProp.value
+      else if (identifier == 3) item.key3 = itemProp.value
+      else if (identifier == 4) item.key4 = itemProp.value
+      identifier += 1
+    }
 
     if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
       item.keywords = item.keywords + ' | ' + (itemProp.value as string);
@@ -432,6 +445,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
   request.requester = event.transaction.from;
+  request.numberOfEvidence = BigInt.fromI32(0);
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -465,6 +479,11 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     updateCounters(previousStatus, newStatus, event.address);
   }
 
+  let evidenceGroupIDToLRequest = new EvidenceGroupIDToLRequest(
+        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
+  evidenceGroupIDToLRequest.request = requestID
+
+  evidenceGroupIDToLRequest.save()
   round.save();
   request.save();
   item.save();
@@ -855,4 +874,36 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   }
 
   registry.save();
+}
+
+export function handleEvidence(event: EvidenceEvent): void {
+  let evidenceGroupIDToLRequest = EvidenceGroupIDToLRequest.load(
+        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
+  if (!evidenceGroupIDToLRequest) {
+    log.error('EvidenceGroupID {} not registered for {}.',
+              [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
+    return;
+  }
+
+  let request = LRequest.load(evidenceGroupIDToLRequest.request)
+  if (!request) {
+    log.error('Request {} not found.', [evidenceGroupIDToLRequest.request]);
+    return;
+  }
+
+  let evidence = new LEvidence(
+      request.id + '-' + request.numberOfEvidence.toString(),
+  );
+
+  evidence.arbitrator = event.params._arbitrator;
+  evidence.evidenceGroupID = event.params._evidenceGroupID;
+  evidence.party = event.params._party;
+  evidence.URI = event.params._evidence;
+  evidence.request = request.id;
+  evidence.number = request.numberOfEvidence;
+
+  request.numberOfEvidence = request.numberOfEvidence.plus(BigInt.fromI32(1));
+
+  request.save();
+  evidence.save();
 }
