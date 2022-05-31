@@ -36,7 +36,10 @@ import {
   Evidence as EvidenceEvent,
   NewItem,
   RewardWithdrawn,
+  InitializeCall,
+  ConnectedTCRSet,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
+import { ChangeSubmissionBaseDepositCall } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -480,7 +483,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   }
 
   let evidenceGroupIDToLRequest = new EvidenceGroupIDToLRequest(
-        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
+    event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
   evidenceGroupIDToLRequest.request = requestID
 
   evidenceGroupIDToLRequest.save()
@@ -655,8 +658,8 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.ruling = currentRuling.equals(BigInt.fromI32(0))
     ? NONE
     : currentRuling.equals(BigInt.fromI32(1))
-    ? ACCEPT
-    : REJECT;
+      ? ACCEPT
+      : REJECT;
 
   item.save();
   round.save();
@@ -878,10 +881,10 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
 
 export function handleEvidence(event: EvidenceEvent): void {
   let evidenceGroupIDToLRequest = EvidenceGroupIDToLRequest.load(
-        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
+    event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
   if (!evidenceGroupIDToLRequest) {
     log.error('EvidenceGroupID {} not registered for {}.',
-              [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
+      [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
     return;
   }
 
@@ -892,7 +895,7 @@ export function handleEvidence(event: EvidenceEvent): void {
   }
 
   let evidence = new LEvidence(
-      request.id + '-' + request.numberOfEvidence.toString(),
+    request.id + '-' + request.numberOfEvidence.toString(),
   );
 
   evidence.arbitrator = event.params._arbitrator;
@@ -906,4 +909,43 @@ export function handleEvidence(event: EvidenceEvent): void {
 
   request.save();
   evidence.save();
+}
+
+export function handleConnectedTCRSet(event: ConnectedTCRSet): void {
+  let registry = LRegistry.load(event.address.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [event.address.toHexString()]);
+    return;
+  }
+
+  registry.connectedTCR = event.params._connectedTCR;
+
+  registry.save();
+}
+
+export function handleInitialze(call: InitializeCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.submissionBaseDeposit = call.inputs._baseDeposits[0];
+
+  registry.save();
+}
+
+export function hanldeChangeSubmissionBaseDeposit(call: ChangeSubmissionBaseDepositCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.submissionBaseDeposit = call.inputs._submissionBaseDeposit;
+
+  registry.save();
 }

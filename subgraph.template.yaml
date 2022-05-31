@@ -88,6 +88,13 @@ templates:
           handler: handleMetaEvidence
         - event: Evidence(indexed address,indexed uint256,indexed address,string)
           handler: handleEvidence
+        - event: ConnectedTCRSet(indexed address)
+          handler: handleConnectedTCRSet
+      callHandlers:
+        - function: initialize(IArbitrator,bytes calldata,address,string calldata,string calldata,address,uint256[4] calldata,uint256,uint256[3] calldata,address)
+          handler: handleInitialze
+        - function: changeSubmissionBaseDeposit(uint256)
+          handler: hanldeChangeSubmissionBaseDeposit
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator
