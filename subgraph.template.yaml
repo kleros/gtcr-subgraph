@@ -21,6 +21,8 @@ dataSources:
       abis:
         - name: LightGTCRFactory
           file: ./abis/LightGTCRFactory.json
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json
       eventHandlers:
         - event: NewGTCR(indexed address)
           handler: handleNewGTCR

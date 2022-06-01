@@ -3,12 +3,14 @@ import { BigInt } from '@graphprotocol/graph-ts';
 import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
 import { MetaEvidence, LRegistry } from '../generated/schema';
 import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
+import { LightGeneralizedTCR } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 
 export function handleNewGTCR(event: NewGTCR): void {
   LightGeneralizedTCRDataSource.create(event.params._address);
 
   let registry = new LRegistry(event.params._address.toHexString());
 
+  let tcr = LightGeneralizedTCR.bind(event.params._address);
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
   registrationMetaEvidence.save();
@@ -26,5 +28,6 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.numberOfClearingRequested = BigInt.fromI32(0);
   registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
   registry.numberOfChallengedClearing = BigInt.fromI32(0);
+  registry.submissionBaseDeposit = tcr.submissionBaseDeposit();
   registry.save();
 }
