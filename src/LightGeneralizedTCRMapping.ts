@@ -36,10 +36,14 @@ import {
   Evidence as EvidenceEvent,
   NewItem,
   RewardWithdrawn,
-  InitializeCall,
   ConnectedTCRSet,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
-import { ChangeRemovalBaseDepositCall, ChangeRemovalChallengeBaseDepositCall, ChangeSubmissionBaseDepositCall, ChangeSubmissionChallengeBaseDepositCall } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
+import { 
+  ChangeRemovalBaseDepositCall,
+  ChangeRemovalChallengeBaseDepositCall,
+  ChangeSubmissionBaseDepositCall,
+  ChangeSubmissionChallengeBaseDepositCall 
+} from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.

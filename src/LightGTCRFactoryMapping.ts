@@ -12,7 +12,6 @@ export function handleNewGTCR(event: NewGTCR): void {
   let registry = new LRegistry(event.params._address.toHexString());
 
   let tcr = LightGeneralizedTCR.bind(event.params._address);
-  let arbitrator = IArbitrator.bind(tcr.arbitrator());
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
@@ -31,14 +30,20 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.numberOfClearingRequested = BigInt.fromI32(0);
   registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
   registry.numberOfChallengedClearing = BigInt.fromI32(0);
+
+  let arbitrator = IArbitrator.bind(tcr.arbitrator());
+  let arbitrationCost = arbitrator.arbitrationCost(tcr.arbitratorExtraData());
+  registry.arbitrationCost = arbitrationCost;
+
   let submissionBaseDeposit = tcr.submissionBaseDeposit();
   let removalBaseDeposit = tcr.removalBaseDeposit();
   let submissionChallengeBaseDeposit = tcr.submissionChallengeBaseDeposit();
   let removalChallengeBaseDeposit = tcr.removalChallengeBaseDeposit();
-  let arbitrationCost = arbitrator.arbitrationCost(tcr.arbitratorExtraData());
+
   registry.submissionDeposit = submissionBaseDeposit.plus(arbitrationCost);
   registry.removalDeposit = removalBaseDeposit.plus(arbitrationCost);
   registry.submissionChallengeDeposit = submissionChallengeBaseDeposit.plus(arbitrationCost);
   registry.removalChallengeDeposit = removalChallengeBaseDeposit.plus(arbitrationCost);
+
   registry.save();
 }
