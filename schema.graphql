@@ -64,10 +64,13 @@ type LRegistry @entity {
   numberOfChallengedRegistrations: BigInt!
   "The total number of items in the challenged removal state."
   numberOfChallengedClearing: BigInt!
-  "The base deposit to submit an item."
-  submissionBaseDeposit: BigInt!
   "The connect tcr address."
   connectedTCR: Bytes!
+  arbitrationCost: BigInt!
+  submissionDeposit: BigInt!
+  submissionChallengeDeposit: BigInt!
+  removalDeposit: BigInt!
+  removalChallengeDeposit: BigInt!
 }
 
 type MetaEvidence @entity {

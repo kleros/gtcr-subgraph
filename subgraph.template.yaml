@@ -23,6 +23,8 @@ dataSources:
           file: ./abis/LightGTCRFactory.json
         - name: LightGeneralizedTCR
           file: ./abis/LightGeneralizedTCR.json
+        - name: IArbitrator
+          file: ./abis/IArbitrator.json
       eventHandlers:
         - event: NewGTCR(indexed address)
           handler: handleNewGTCR
@@ -93,10 +95,14 @@ templates:
         - event: ConnectedTCRSet(indexed address)
           handler: handleConnectedTCRSet
       callHandlers:
-        - function: initialize(IArbitrator,bytes calldata,address,string calldata,string calldata,address,uint256[4] calldata,uint256,uint256[3] calldata,address)
-          handler: handleInitialze
         - function: changeSubmissionBaseDeposit(uint256)
           handler: hanldeChangeSubmissionBaseDeposit
+        - function: changeSubmissionChallengeBaseDeposit(uint256)
+          handler: hanldeChangeSubmissionChallengeBaseDeposit
+        - function: changeRemovalBaseDeposit(uint256)
+          handler: hanldeChangeRemovalBaseDeposit
+        - function: changeRemovalChallengeBaseDeposit(uint256)
+          handler: handleChangeRemovalChallengeBaseDeposit
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator

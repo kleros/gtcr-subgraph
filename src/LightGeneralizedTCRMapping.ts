@@ -39,7 +39,7 @@ import {
   InitializeCall,
   ConnectedTCRSet,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
-import { ChangeSubmissionBaseDepositCall } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
+import { ChangeRemovalBaseDepositCall, ChangeRemovalChallengeBaseDepositCall, ChangeSubmissionBaseDepositCall, ChangeSubmissionChallengeBaseDepositCall } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -924,7 +924,7 @@ export function handleConnectedTCRSet(event: ConnectedTCRSet): void {
   registry.save();
 }
 
-export function handleInitialze(call: InitializeCall): void {
+export function handleChangeSubmissionBaseDeposit(call: ChangeSubmissionBaseDepositCall): void {
   let registry = LRegistry.load(call.from.toHexString());
   
   if (!registry) {
@@ -932,12 +932,12 @@ export function handleInitialze(call: InitializeCall): void {
     return;
   }
 
-  registry.submissionBaseDeposit = call.inputs._baseDeposits[0];
+  registry.submissionDeposit = call.inputs._submissionBaseDeposit.plus(registry.arbitrationCost);
 
   registry.save();
 }
 
-export function hanldeChangeSubmissionBaseDeposit(call: ChangeSubmissionBaseDepositCall): void {
+export function handleChangeSubmissionChallengeBaseDeposit(call: ChangeSubmissionChallengeBaseDepositCall): void {
   let registry = LRegistry.load(call.from.toHexString());
   
   if (!registry) {
@@ -945,7 +945,34 @@ export function hanldeChangeSubmissionBaseDeposit(call: ChangeSubmissionBaseDepo
     return;
   }
 
-  registry.submissionBaseDeposit = call.inputs._submissionBaseDeposit;
+  registry.submissionChallengeDeposit = call.inputs._submissionChallengeBaseDeposit.plus(registry.arbitrationCost);
+
+  registry.save();
+}
+
+export function handleChangeRemovalBaseDeposit(call: ChangeRemovalBaseDepositCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.removalDeposit = call.inputs._removalBaseDeposit.plus(registry.arbitrationCost);
+
+  registry.save();
+}
+
+
+export function handleChangeRemovalChallengeBaseDeposit(call: ChangeRemovalChallengeBaseDepositCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.removalChallengeDeposit = call.inputs._removalChallengeBaseDeposit.plus(registry.arbitrationCost);
 
   registry.save();
 }

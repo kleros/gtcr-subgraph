@@ -3,6 +3,7 @@ import { BigInt } from '@graphprotocol/graph-ts';
 import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
 import { MetaEvidence, LRegistry } from '../generated/schema';
 import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
+import { IArbitrator } from '../generated/templates/IArbitrator/IArbitrator';
 import { LightGeneralizedTCR } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 
 export function handleNewGTCR(event: NewGTCR): void {
@@ -11,6 +12,8 @@ export function handleNewGTCR(event: NewGTCR): void {
   let registry = new LRegistry(event.params._address.toHexString());
 
   let tcr = LightGeneralizedTCR.bind(event.params._address);
+  let arbitrator = IArbitrator.bind(tcr.arbitrator());
+
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
   registrationMetaEvidence.save();
@@ -28,6 +31,14 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.numberOfClearingRequested = BigInt.fromI32(0);
   registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
   registry.numberOfChallengedClearing = BigInt.fromI32(0);
-  registry.submissionBaseDeposit = tcr.submissionBaseDeposit();
+  let submissionBaseDeposit = tcr.submissionBaseDeposit();
+  let removalBaseDeposit = tcr.removalBaseDeposit();
+  let submissionChallengeBaseDeposit = tcr.submissionChallengeBaseDeposit();
+  let removalChallengeBaseDeposit = tcr.removalChallengeBaseDeposit();
+  let arbitrationCost = arbitrator.arbitrationCost(tcr.arbitratorExtraData());
+  registry.submissionDeposit = submissionBaseDeposit.plus(arbitrationCost);
+  registry.removalDeposit = removalBaseDeposit.plus(arbitrationCost);
+  registry.submissionChallengeDeposit = submissionChallengeBaseDeposit.plus(arbitrationCost);
+  registry.removalChallengeDeposit = removalChallengeBaseDeposit.plus(arbitrationCost);
   registry.save();
 }
