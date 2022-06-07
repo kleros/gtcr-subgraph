@@ -71,6 +71,7 @@ type LRegistry @entity {
   submissionChallengeDeposit: BigInt!
   removalDeposit: BigInt!
   removalChallengeDeposit: BigInt!
+  challengePeriodDuration: BigInt!
 }
 
 type MetaEvidence @entity {

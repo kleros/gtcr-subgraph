@@ -30,6 +30,7 @@ export function handleNewGTCR(event: NewGTCR): void {
   registry.numberOfClearingRequested = BigInt.fromI32(0);
   registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
   registry.numberOfChallengedClearing = BigInt.fromI32(0);
+  registry.challengePeriodDuration = tcr.challengePeriodDuration();
 
   let arbitrator = IArbitrator.bind(tcr.arbitrator());
   let arbitrationCost = arbitrator.arbitrationCost(tcr.arbitratorExtraData());
