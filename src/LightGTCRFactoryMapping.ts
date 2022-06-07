@@ -15,10 +15,12 @@ export function handleNewGTCR(event: NewGTCR): void {
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
+  registrationMetaEvidence.timestamp = event.block.timestamp;
   registrationMetaEvidence.save();
 
   let clearingMetaEvidence = new MetaEvidence(registry.id + '-2');
   clearingMetaEvidence.URI = '';
+  clearingMetaEvidence.timestamp = event.block.timestamp;
   clearingMetaEvidence.save();
 
   registry.metaEvidenceCount = BigInt.fromI32(0);
@@ -41,8 +43,10 @@ export function handleNewGTCR(event: NewGTCR): void {
   let submissionChallengeBaseDeposit = tcr.submissionChallengeBaseDeposit();
   let removalChallengeBaseDeposit = tcr.removalChallengeBaseDeposit();
 
+  registry.submissionBaseDeposit = submissionBaseDeposit;
   registry.submissionDeposit = submissionBaseDeposit.plus(arbitrationCost);
   registry.removalDeposit = removalBaseDeposit.plus(arbitrationCost);
+  registry.removalBaseDeposit = removalBaseDeposit;
   registry.submissionChallengeDeposit = submissionChallengeBaseDeposit.plus(arbitrationCost);
   registry.removalChallengeDeposit = removalChallengeBaseDeposit.plus(arbitrationCost);
 

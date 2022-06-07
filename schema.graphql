@@ -68,8 +68,10 @@ type LRegistry @entity {
   connectedTCR: Bytes!
   arbitrationCost: BigInt!
   submissionDeposit: BigInt!
+  submissionBaseDeposit: BigInt!
   submissionChallengeDeposit: BigInt!
   removalDeposit: BigInt!
+  removalBaseDeposit: BigInt!
   removalChallengeDeposit: BigInt!
   challengePeriodDuration: BigInt!
 }
