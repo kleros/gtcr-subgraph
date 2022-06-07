@@ -78,6 +78,8 @@ type MetaEvidence @entity {
   id: ID!
   "The URI of the meta evidence file."
   URI: String!
+  "Timestamp of block containing the meta evidence"
+  timestamp: BigInt!
 }
 
 type LEvidence @entity {
