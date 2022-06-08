@@ -12,10 +12,12 @@ export function handleNewGTCR(event: NewGTCR): void {
 
   let registrationMetaEvidence = new MetaEvidence(registry.id + '-1');
   registrationMetaEvidence.URI = '';
+  registrationMetaEvidence.timestamp = event.block.timestamp;
   registrationMetaEvidence.save();
 
   let clearingMetaEvidence = new MetaEvidence(registry.id + '-2');
   clearingMetaEvidence.URI = '';
+  clearingMetaEvidence.timestamp = event.block.timestamp;
   clearingMetaEvidence.save();
 
   registry.registrationMetaEvidence = registrationMetaEvidence.id;
