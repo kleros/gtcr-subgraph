@@ -79,9 +79,11 @@ type LRegistry @entity {
 type MetaEvidence @entity {
   "The meta evidence ID."
   id: ID!
+  "The TCR contract address"
+  tcrAddress: Bytes!
   "The URI of the meta evidence file."
   URI: String!
-  "Timestamp of block containing the meta evidence"
+  "The timestamp of block containing the meta evidence"
   timestamp: BigInt!
 }
 
