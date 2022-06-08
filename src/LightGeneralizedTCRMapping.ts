@@ -871,6 +871,7 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
 
   metaEvidence.URI = event.params._evidence;
   metaEvidence.timestamp = event.block.timestamp;
+  metaEvidence.tcrAddress = event.address;
   metaEvidence.save();
 
   if (
