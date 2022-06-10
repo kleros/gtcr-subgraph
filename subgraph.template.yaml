@@ -103,6 +103,12 @@ templates:
           handler: hanldeChangeRemovalBaseDeposit
         - function: changeRemovalChallengeBaseDeposit(uint256)
           handler: handleChangeRemovalChallengeBaseDeposit
+        - function: changeSharedStakeMultiplier(uint256)
+          handler: handleChangeSharedStakeMultiplier
+        - function: changeWinnerStakeMultiplier(uint256)
+          handler: handleChangeWinnerStakeMultiplier
+        - function: changeLoserStakeMultiplier(uint256)
+          handler: handleChangeLoserStakeMultiplier
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator

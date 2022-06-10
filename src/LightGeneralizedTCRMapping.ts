@@ -39,10 +39,13 @@ import {
   ConnectedTCRSet,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 import { 
+  ChangeLoserStakeMultiplierCall,
   ChangeRemovalBaseDepositCall,
   ChangeRemovalChallengeBaseDepositCall,
+  ChangeSharedStakeMultiplierCall,
   ChangeSubmissionBaseDepositCall,
-  ChangeSubmissionChallengeBaseDepositCall 
+  ChangeSubmissionChallengeBaseDepositCall, 
+  ChangeWinnerStakeMultiplierCall
 } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -979,6 +982,45 @@ export function handleChangeRemovalChallengeBaseDeposit(call: ChangeRemovalChall
   }
 
   registry.removalChallengeDeposit = call.inputs._removalChallengeBaseDeposit.plus(registry.arbitrationCost);
+
+  registry.save();
+}
+
+export function handleChangeSharedStakeMultiplier(call: ChangeSharedStakeMultiplierCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.sharedStakeMultiplier = call.inputs._sharedStakeMultiplier;
+
+  registry.save();
+}
+
+export function handleChangeWinnerStakeMultiplier(call: ChangeWinnerStakeMultiplierCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.winnerStakeMultiplier = call.inputs._winnerStakeMultiplier;
+
+  registry.save();
+}
+
+export function handleChangeLoserStakeMultiplier(call: ChangeLoserStakeMultiplierCall): void {
+  let registry = LRegistry.load(call.from.toHexString());
+  
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [call.from.toHexString()]);
+    return;
+  }
+
+  registry.loserStakeMultiplier = call.inputs._loserStakeMultiplier;
 
   registry.save();
 }

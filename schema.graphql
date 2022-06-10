@@ -74,6 +74,10 @@ type LRegistry @entity {
   removalBaseDeposit: BigInt!
   removalChallengeDeposit: BigInt!
   challengePeriodDuration: BigInt!
+  sharedStakeMultiplier: BigInt!
+  winnerStakeMultiplier: BigInt!
+  loserStakeMultiplier: BigInt!
+  MULTIPLIER_DIVISOR: BigInt!
 }
 
 type MetaEvidence @entity {
