@@ -255,6 +255,10 @@ type LRound @entity {
   numberOfContributions: BigInt!
   "Whether this round was appealed."
   appealed: Boolean!
+  "The appealCost"
+  appealCost: BigInt!
+  "The disputeStatus"
+  disputeStatus: Int!
 }
 
 type LContribution @entity {

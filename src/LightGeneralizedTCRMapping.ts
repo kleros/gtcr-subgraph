@@ -149,6 +149,8 @@ function buildNewRound(
   newRound.request = requestID;
   newRound.appealPeriodStart = BigInt.fromI32(0);
   newRound.appealPeriodEnd = BigInt.fromI32(0);
+  newRound.appealCost = BigInt.fromI32(0);
+  newRound.disputeStatus = 0;
   newRound.rulingTime = BigInt.fromI32(0);
   newRound.ruling = NONE;
   newRound.creationTime = timestamp;
@@ -660,6 +662,11 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.appealPeriodStart = appealPeriod.value0;
   round.appealPeriodEnd = appealPeriod.value1;
   round.rulingTime = event.block.timestamp;
+  round.disputeStatus = arbitrator.disputeStatus(request.disputeID);
+  round.appealCost = arbitrator.appealCost(
+    request.disputeID,
+    request.arbitratorExtraData,
+  );
 
   let currentRuling = arbitrator.currentRuling(request.disputeID);
   round.ruling = currentRuling.equals(BigInt.fromI32(0))
