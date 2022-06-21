@@ -96,11 +96,11 @@ templates:
           handler: handleConnectedTCRSet
       callHandlers:
         - function: changeSubmissionBaseDeposit(uint256)
-          handler: hanldeChangeSubmissionBaseDeposit
+          handler: handleChangeSubmissionBaseDeposit
         - function: changeSubmissionChallengeBaseDeposit(uint256)
-          handler: hanldeChangeSubmissionChallengeBaseDeposit
+          handler: handleChangeSubmissionChallengeBaseDeposit
         - function: changeRemovalBaseDeposit(uint256)
-          handler: hanldeChangeRemovalBaseDeposit
+          handler: handleChangeRemovalBaseDeposit
         - function: changeRemovalChallengeBaseDeposit(uint256)
           handler: handleChangeRemovalChallengeBaseDeposit
         - function: changeSharedStakeMultiplier(uint256)

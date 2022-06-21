@@ -64,7 +64,7 @@ type LRegistry @entity {
   numberOfChallengedRegistrations: BigInt!
   "The total number of items in the challenged removal state."
   numberOfChallengedClearing: BigInt!
-  "The connect tcr address."
+  "The connected tcr address."
   connectedTCR: Bytes!
   arbitrationCost: BigInt!
   submissionDeposit: BigInt!
@@ -255,9 +255,9 @@ type LRound @entity {
   numberOfContributions: BigInt!
   "Whether this round was appealed."
   appealed: Boolean!
-  "The appealCost"
+  "The cost of the appeal"
   appealCost: BigInt!
-  "The disputeStatus"
+  "The current status of the dispute"
   disputeStatus: Int!
 }
 
