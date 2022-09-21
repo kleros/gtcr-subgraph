@@ -6,6 +6,8 @@ const chainNameToChainId = {
   mainnet: 1,
   kovan: 42,
   rinkeby: 4,
+  goerli: 5,
+  "arbitrum-rinkeby": 421611
 };
 
 async function main() {
