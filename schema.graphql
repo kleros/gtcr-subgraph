@@ -84,7 +84,9 @@ type LEvidence @entity {
   party: Bytes!
   "The URI of the evidence file."
   URI: String!
-  "The request this evidence belongs to."
+  "The item this evidence was submitted to."
+  item: LItem!
+  "The latest request when this evidence was submitted."
   request: LRequest
   "This is the <number>th evidence submitted (starting at 0) for <request>."
   number: BigInt!

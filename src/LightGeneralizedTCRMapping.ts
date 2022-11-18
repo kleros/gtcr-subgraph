@@ -901,6 +901,7 @@ export function handleEvidence(event: EvidenceEvent): void {
   evidence.URI = event.params._evidence;
   evidence.request = request.id;
   evidence.number = request.numberOfEvidence;
+  evidence.item = request.item;
 
   request.numberOfEvidence = request.numberOfEvidence.plus(BigInt.fromI32(1));
 
