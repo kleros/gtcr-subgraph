@@ -511,6 +511,7 @@ export function handleEvidence(event: EvidenceEvent): void {
   evidence.request = request.id;
   evidence.number = request.numberOfEvidence;
   evidence.item = request.item;
+  evidence.timestamp = event.block.timestamp;
 
   request.numberOfEvidence = request.numberOfEvidence.plus(BigInt.fromI32(1));
 
