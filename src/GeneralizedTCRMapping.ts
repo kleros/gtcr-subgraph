@@ -9,6 +9,7 @@ import {
   Arbitrator,
   EvidenceGroupIDToRequest,
   Evidence,
+  HasPaidAppealFee,
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -19,7 +20,7 @@ import {
   AppealContribution,
   Dispute,
   GeneralizedTCR,
-  HasPaidAppealFee,
+  HasPaidAppealFee as HasPaidAppealFeeEvent,
   ItemStatusChange,
   RequestEvidenceGroupID,
   MetaEvidence as MetaEvidenceEvent,
@@ -326,7 +327,7 @@ export function handleAppealContribution(event: AppealContribution): void {
   round.save();
 }
 
-export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
+export function handleHasPaidAppealFee(event: HasPaidAppealFeeEvent): void {
   let tcr = GeneralizedTCR.bind(event.address);
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
@@ -382,6 +383,14 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFee): void {
   }
 
   round.save();
+
+  let hasPaidAppealFeeID = roundID + "-" + event.params._side.toString()
+  let hasPaidAppealFee = new HasPaidAppealFee(hasPaidAppealFeeID)
+  hasPaidAppealFee.item = graphItemID;
+  hasPaidAppealFee.request = requestID;
+  hasPaidAppealFee.round = roundID;
+  hasPaidAppealFee.timestamp = event.block.timestamp;
+  hasPaidAppealFee.save()
 }
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {

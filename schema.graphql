@@ -285,6 +285,7 @@ type LContribution @entity {
 }
 
 type Round @entity {
+  "<itemID>-<requestID>-<roundID>"
   id: ID!
   "The total amount of appeal fees contributed to the requester in this round."
   amountPaidRequester: BigInt!
@@ -340,7 +341,7 @@ type Item @entity {
 }
 
 type Request @entity {
-  "The item ID (which is the keccak256 hash of its data)."
+  "<itemID>-<requestId>"
   id: ID!
   "True if a dispute was raised."
   disputed: Boolean!
@@ -380,4 +381,19 @@ type Request @entity {
   registryAddress: Bytes!
   "The time the request was resolved."
   resolutionTime: BigInt!
+}
+
+type HasPaidAppealFee @entity {
+  "<itemID>-<requestID>-<roundID>-<side>"
+  id: ID!
+
+  item: Item!
+
+  request: Request!
+
+  round: Round!
+  "Side the fund is in favor of"
+  side: BigInt!
+  "Timestamp of the event"
+  timestamp: BigInt!
 }
