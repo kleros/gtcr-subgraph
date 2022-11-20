@@ -7,6 +7,8 @@ import {
   Registry,
   MetaEvidence,
   Arbitrator,
+  EvidenceGroupIDToRequest,
+  Evidence,
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -21,6 +23,7 @@ import {
   ItemStatusChange,
   RequestEvidenceGroupID,
   MetaEvidence as MetaEvidenceEvent,
+  Evidence as EvidenceEvent
 } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -136,6 +139,7 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.numberOfRounds = BigInt.fromI32(1);
   request.requestType = item.status;
   request.evidenceGroupID = event.params._evidenceGroupID;
+  request.numberOfEvidence = BigInt.fromI32(0);
 
   let roundID = requestID + '-0';
   let round = new Round(roundID);
@@ -163,6 +167,11 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.rulingTime = BigInt.fromI32(0);
   round.ruling = NONE;
   round.creationTime = event.block.timestamp;
+  let evidenceGroupIDToLRequest = new EvidenceGroupIDToRequest(
+    event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
+  evidenceGroupIDToLRequest.request = requestID
+
+  evidenceGroupIDToLRequest.save()
   round.save();
   request.save();
   item.save();
@@ -474,4 +483,37 @@ export function handleAppealPossible(event: AppealPossible): void {
 
   item.save();
   round.save();
+}
+
+export function handleEvidence(event: EvidenceEvent): void {
+  let evidenceGroupIDToRequest = EvidenceGroupIDToRequest.load(
+        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
+  if (!evidenceGroupIDToRequest) {
+    log.error('EvidenceGroupID {} not registered for {}.',
+              [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
+    return;
+  }
+
+  let request = Request.load(evidenceGroupIDToRequest.request)
+  if (!request) {
+    log.error('Request {} not found.', [evidenceGroupIDToRequest.request]);
+    return;
+  }
+
+  let evidence = new Evidence(
+      request.id + '-' + request.numberOfEvidence.toString(),
+  );
+
+  evidence.arbitrator = event.params._arbitrator;
+  evidence.evidenceGroupID = event.params._evidenceGroupID;
+  evidence.party = event.params._party;
+  evidence.URI = event.params._evidence;
+  evidence.request = request.id;
+  evidence.number = request.numberOfEvidence;
+  evidence.item = request.item;
+
+  request.numberOfEvidence = request.numberOfEvidence.plus(BigInt.fromI32(1));
+
+  request.save();
+  evidence.save();
 }

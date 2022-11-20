@@ -73,6 +73,25 @@ type MetaEvidence @entity {
   URI: String!
 }
 
+type Evidence @entity {
+  "<Request.id>-<evidence number>"
+  id: ID!
+  "The arbitrator's address."
+  arbitrator: Bytes!
+  "The ID of the evidence group (see {L,}Request.evidenceGroupID)."
+  evidenceGroupID: BigInt!
+  "The address of the party that sent this piece of evidence."
+  party: Bytes!
+  "The URI of the evidence file."
+  URI: String!
+  "The item this evidence was submitted to."
+  item: Item!
+  "The latest request when this evidence was submitted."
+  request: Request
+  "This is the <number>th evidence submitted (starting at 0) for <request>."
+  number: BigInt!
+}
+
 type LEvidence @entity {
   "<Request.id>-<evidence number>"
   id: ID!
@@ -97,6 +116,13 @@ type EvidenceGroupIDToLRequest @entity {
   id: ID!
   "LRequest ID"
   request: LRequest!
+}
+
+type EvidenceGroupIDToRequest @entity {
+  "<EvidenceGroupID>@<contract address>"
+  id: ID!
+  "Request ID"
+  request: Request!
 }
 
 type LItem @entity {
@@ -340,6 +366,8 @@ type Request @entity {
   requestType: Status!
   "The URI to the meta evidence used for this request."
   metaEvidence: MetaEvidence!
+  "Number of evidences."
+  numberOfEvidence: BigInt!
   "The item this request belongs to."
   item: Item!
   "The registry where this request was submitted."

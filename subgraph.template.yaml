@@ -143,6 +143,8 @@ templates:
           handler: handleHasPaidAppealFee
         - event: MetaEvidence(indexed uint256,string)
           handler: handleMetaEvidence
+        - event: Evidence(indexed address,indexed uint256,indexed address,string)
+          handler: handleEvidence
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator
