@@ -108,6 +108,8 @@ templates:
       eventHandlers:
         - event: AppealPossible(indexed uint256,indexed address)
           handler: handleAppealPossible
+        - event: AppealDecision(indexed uint256,indexed address)
+          handler: handleAppealDecision
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: GeneralizedTCR
@@ -170,4 +172,6 @@ templates:
       eventHandlers:
         - event: AppealPossible(indexed uint256,indexed address)
           handler: handleAppealPossible
+        - event: AppealDecision(indexed uint256,indexed address)
+          handler: handleAppealDecision
       file: ./src/GeneralizedTCRMapping.ts

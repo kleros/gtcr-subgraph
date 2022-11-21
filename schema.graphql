@@ -273,6 +273,8 @@ type LRound @entity {
   numberOfContributions: BigInt!
   "Whether this round was appealed."
   appealed: Boolean!
+  "When this round was appealed, if it was appealed"
+  appealedAt: BigInt
 }
 
 type LContribution @entity {
@@ -313,6 +315,10 @@ type Round @entity {
   ruling: Ruling!
   "The moment the round was created."
   creationTime: BigInt!
+  "Whether this round was appealed"
+  appealed: Boolean!
+  "When this round was appealed, if it was appealed"
+  appealedAt: BigInt
 }
 
 type Item @entity {

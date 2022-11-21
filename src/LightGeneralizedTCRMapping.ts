@@ -23,6 +23,7 @@ import {
 } from '../generated/schema';
 import {
   AppealPossible,
+  AppealDecision,
   IArbitrator,
 } from '../generated/templates/IArbitrator/IArbitrator';
 import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates';
@@ -668,6 +669,47 @@ export function handleAppealPossible(event: AppealPossible): void {
 
   item.save();
   round.save();
+}
+
+export function handleAppealDecision(event: AppealDecision): void {
+  let registry = LRegistry.load(event.params._arbitrable.toHexString());
+  if (registry == null) return; // Event not related to a GTCR.
+
+  let tcr = LightGeneralizedTCR.bind(event.params._arbitrable);
+  let itemID = tcr.arbitratorDisputeIDToItemID(
+    event.address,
+    event.params._disputeID,
+  );
+  let graphItemID =
+    itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
+  let item = LItem.load(graphItemID);
+  if (!item) {
+    log.error(`LItem {} not found.`, [graphItemID]);
+    return;
+  }
+
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} not found.`, [requestID]);
+    return;
+  }
+
+  let roundID =
+    request.id +
+    '-' +
+    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+  let round = LRound.load(roundID);
+  if (!round) {
+    log.error(`LRound {} not found.`, [roundID]);
+    return;
+  }
+
+  round.appealed = true;
+  round.appealedAt = event.block.timestamp;
+
+  round.save()
 }
 
 export function handleStatusUpdated(event: ItemStatusChange): void {

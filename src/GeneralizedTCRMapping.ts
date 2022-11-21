@@ -13,6 +13,7 @@ import {
 } from '../generated/schema';
 import {
   AppealPossible,
+  AppealDecision,
   IArbitrator,
 } from '../generated/templates/IArbitrator/IArbitrator';
 import { IArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates';
@@ -492,6 +493,46 @@ export function handleAppealPossible(event: AppealPossible): void {
 
   item.save();
   round.save();
+}
+
+export function handleAppealDecision(event: AppealDecision): void {
+  let registry = Registry.load(event.params._arbitrable.toHexString());
+  if (registry == null) return; // Event not related to a GTCR.
+
+  let tcr = GeneralizedTCR.bind(event.params._arbitrable);
+  let itemID = tcr.arbitratorDisputeIDToItem(
+    event.address,
+    event.params._disputeID,
+  );
+  let graphItemID =
+    itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
+  let item = Item.load(graphItemID);
+  if (!item) {
+    log.error('Item of graphItemID {} not found.', [graphItemID]);
+    return;
+  }
+
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = Request.load(requestID);
+  if (!request) {
+    log.error(`Request of requestID {} not found.`, [requestID]);
+    return;
+  }
+
+  let roundID =
+    request.id +
+    '-' +
+    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+  let round = Round.load(roundID);
+  if (!round) {
+    log.error(`Round of roundID {} not found.`, [roundID]);
+    return;
+  }
+
+  round.appealed = true;
+  round.appealedAt = event.block.timestamp;
+  round.save()
 }
 
 export function handleEvidence(event: EvidenceEvent): void {
