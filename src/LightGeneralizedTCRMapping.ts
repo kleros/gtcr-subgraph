@@ -136,6 +136,8 @@ function buildNewRound(
   newRound.feeRewards = BigInt.fromI32(0);
   newRound.hasPaidRequester = false;
   newRound.hasPaidChallenger = false;
+  newRound.lastFundedRequester = BigInt.fromI32(0);
+  newRound.lastFundedChallenger = BigInt.fromI32(0);
   newRound.request = requestID;
   newRound.appealPeriodStart = BigInt.fromI32(0);
   newRound.appealPeriodEnd = BigInt.fromI32(0);
@@ -531,8 +533,14 @@ export function handleContribution(event: Contribution): void {
     round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
     round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
     round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
-    round.hasPaidRequester = roundInfo.value2[CHALLENGER_CODE];
+    round.hasPaidChallenger = roundInfo.value2[CHALLENGER_CODE];
     round.feeRewards = roundInfo.value3;
+  }
+
+  if (event.params._side == 1) {
+    round.lastFundedRequester = event.block.timestamp;
+  } else {
+    round.lastFundedChallenger = event.block.timestamp;
   }
 
   let requestInfo = tcr.getRequestInfo(

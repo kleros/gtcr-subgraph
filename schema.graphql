@@ -249,6 +249,10 @@ type LRound @entity {
   hasPaidRequester: Boolean!
   "Whether the challenger is fully funded."
   hasPaidChallenger: Boolean!
+  "When was the last contribution for requester (hack for curate bot)"
+  lastFundedRequester: BigInt!
+  "When was the last contribution for challenger (hack for curate bot)"
+  lastFundedChallenger: BigInt!
   "Sum of reimbursable fees and stake rewards available to the parties that made contributions to the side that ultimately wins a dispute."
   feeRewards: BigInt!
   "The request to which this round belongs."
