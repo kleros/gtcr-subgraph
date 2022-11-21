@@ -88,6 +88,8 @@ templates:
           handler: handleMetaEvidence
         - event: Evidence(indexed address,indexed uint256,indexed address,string)
           handler: handleEvidence
+        - event: Ruling(indexed address,indexed uint256,uint256)
+          handler: handleRuling
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator
@@ -147,6 +149,8 @@ templates:
           handler: handleMetaEvidence
         - event: Evidence(indexed address,indexed uint256,indexed address,string)
           handler: handleEvidence
+        - event: Ruling(indexed address,indexed uint256,uint256)
+          handler: handleRuling
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator

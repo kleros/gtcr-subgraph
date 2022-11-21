@@ -25,7 +25,8 @@ import {
   ItemStatusChange,
   RequestEvidenceGroupID,
   MetaEvidence as MetaEvidenceEvent,
-  Evidence as EvidenceEvent
+  Evidence as EvidenceEvent,
+  Ruling,
 } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -567,4 +568,32 @@ export function handleEvidence(event: EvidenceEvent): void {
 
   request.save();
   evidence.save();
+}
+
+
+export function handleRuling(event: Ruling): void {
+  let tcr = GeneralizedTCR.bind(event.address);
+  let itemID = tcr.arbitratorDisputeIDToItem(
+    event.address,
+    event.params._disputeID,
+  );
+  let graphItemID =
+    itemID.toHexString() + '@' + event.address.toHexString();
+  let item = Item.load(graphItemID);
+  if (!item) {
+    log.error('Item of graphItemID {} not found.', [graphItemID]);
+    return;
+  }
+
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = Request.load(requestID);
+  if (!request) {
+    log.error(`Request of requestID {} not found.`, [requestID]);
+    return;
+  }
+
+  request.finalRuling = event.params._ruling;
+  request.resolutionTime = event.block.timestamp;
+  request.save()
 }

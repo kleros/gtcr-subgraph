@@ -37,6 +37,7 @@ import {
   Evidence as EvidenceEvent,
   NewItem,
   RewardWithdrawn,
+  Ruling,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -958,4 +959,31 @@ export function handleEvidence(event: EvidenceEvent): void {
 
   request.save();
   evidence.save();
+}
+
+export function handleRuling(event: Ruling): void {
+  let tcr = LightGeneralizedTCR.bind(event.address);
+  let itemID = tcr.arbitratorDisputeIDToItemID(
+    event.address,
+    event.params._disputeID,
+  );
+  let graphItemID =
+    itemID.toHexString() + '@' + event.address.toHexString();
+  let item = LItem.load(graphItemID);
+  if (!item) {
+    log.error(`LItem {} not found.`, [graphItemID]);
+    return;
+  }
+
+  let requestID =
+    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+  let request = LRequest.load(requestID);
+  if (!request) {
+    log.error(`LRequest {} not found.`, [requestID]);
+    return;
+  }
+
+  request.finalRuling = event.params._ruling;
+  request.resolutionTime = event.block.timestamp;
+  request.save()
 }

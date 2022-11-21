@@ -233,6 +233,8 @@ type LRequest @entity {
   registryAddress: Bytes!
   "The time the request was resolved."
   resolutionTime: BigInt!
+  "Only set if the request was settled by a dispute. Used by the twitter bot"
+  finalRuling: BigInt!
   "The hash of the transaction that created this request."
   creationTx: Bytes!
   "The hash of the transaction that solved this request."
@@ -391,6 +393,8 @@ type Request @entity {
   registryAddress: Bytes!
   "The time the request was resolved."
   resolutionTime: BigInt!
+  "Only set if the request was settled by a dispute. Used by the twitter bot"
+  finalRuling: BigInt!
 }
 
 type HasPaidAppealFee @entity {
