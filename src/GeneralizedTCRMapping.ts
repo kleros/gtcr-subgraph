@@ -392,7 +392,7 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFeeEvent): void {
   hasPaidAppealFee.request = requestID;
   hasPaidAppealFee.round = roundID;
   hasPaidAppealFee.timestamp = event.block.timestamp;
-  hasPaidAppealFee.side = event.params._side;
+  hasPaidAppealFee.side = BigInt.fromI32(event.params._side);
   hasPaidAppealFee.save()
 }
 
