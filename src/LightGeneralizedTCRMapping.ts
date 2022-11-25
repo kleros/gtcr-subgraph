@@ -531,7 +531,10 @@ export function handleContribution(event: Contribution): void {
       event.params._requestID,
       event.params._roundID.minus(BigInt.fromI32(1)),
     );
-    round.appealed = roundInfo.value0;
+
+    // we cannot get round.appealed from this roundInfo because
+    // of a smart contract bug.
+    // can only be set on AppealDecision.
     round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
     round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
     round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
@@ -539,7 +542,7 @@ export function handleContribution(event: Contribution): void {
     round.feeRewards = roundInfo.value3;
   }
 
-  if (event.params._side == 1) {
+  if (event.params._side === 1) {
     round.lastFundedRequester = event.block.timestamp;
   } else {
     round.lastFundedChallenger = event.block.timestamp;
