@@ -137,3 +137,9 @@ const subgraphQuery = {
   
 })()
 ```
+
+### Nov 2022 update
+
+Things can break, but they still work if you format the graph deploy like this:
+
+`npx graph deploy --product hosted-service --access-token <token> --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ <github>/<project>`
