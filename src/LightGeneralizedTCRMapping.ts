@@ -394,7 +394,7 @@ export function handleNewItem(event: NewItem): void {
     }
 
     if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
-      item.keywords = item.keywords + ' | ' + (itemProp.value as string);
+      item.keywords = (item.keywords as string) + ' | ' + (itemProp.value as string);
     }
 
     itemProp.save();
