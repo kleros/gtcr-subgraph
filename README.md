@@ -3,18 +3,29 @@
 </p>
 
 <p align="center">
+  <a href="https://api.securityscorecards.dev/projects/github.com/kleros/gtcr-subgraph"><img src="https://api.securityscorecards.dev/projects/github.com/kleros/gtcr-subgraph/badge" alt="OpenSSF Scorecard"></a>
   <a href="https://conventionalcommits.org"><img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg" alt="Conventional Commits"></a>
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt="Commitizen Friendly"></a>
 </p>
 
 This repo defines a subgraph which is used by Curate.
 
-## Dev
+## Deployment to a personal account
 
-To deploy to your own instance on a testnet, modify the script to use your own subgraph instance. For example, change `deploy:kovan` to `graph deploy --product hosted-service <your-username>/curate-kovan`.
+To deploy to your own instance on a testnet, modify the script to use your own subgraph instance. For example, change `deploy:xdai` to `graph deploy --product hosted-service <your-username>/curate-xdai`.
 
 To set your access token:
 `npx graph auth --product hosted-service <access-token>`
+
+## Deployment to the Kleros organization account
+Go to the [Deploy Subgraph Action](https://github.com/kleros/gtcr-subgraph/actions/workflows/deploy.yml) and click the Run workflow button:
+
+<img width="340" alt="image" src="https://github.com/kleros/gtcr-subgraph/assets/22213980/3c20a22a-9a47-4936-8756-e3aca9751007">
+
+Pick the appropriate network. There should be a corresponding yarn script in the form of `publish:<network>` on the master branch.
+
+Then reach out to a maintainer and request his approval.
+<img width="1265" alt="image" src="https://github.com/kleros/gtcr-subgraph/assets/22213980/3cea54fb-8382-42c4-a44a-37b4bfbeecee">
 
 ## Curate Subgraph Mini-guide
 
