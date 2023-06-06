@@ -1,0 +1,42 @@
+name: Deploy Subgraph
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: The network to deploy the subgraph to
+        required: true
+        default: 'xdai'
+        type: choice
+        options:
+          - xdai
+          - mainnet
+      environment:
+        description: The environment to deploy to
+        required: true
+        default: 'kleros-org-subgraph'
+        type: environment
+
+jobs:
+  buildAndDeploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Authenticate with TheGraph
+        run: yarn auth "${{ secrets.SUBGRAPH_AUTH_TOKEN }}"
+
+      - name: Build and deploy subgraph
+        run: |
+          export NETWORK_NAME=${{ inputs.network }}
+          yarn publish:${{ inputs.network }}
