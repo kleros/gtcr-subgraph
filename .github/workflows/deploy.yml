@@ -34,7 +34,7 @@ jobs:
         run: yarn install
 
       - name: Authenticate with TheGraph
-        run: yarn auth "${{ secrets.SUBGRAPH_AUTH_TOKEN }}"
+        run: yarn graph auth "${{ secrets.SUBGRAPH_AUTH_TOKEN }}"
 
       - name: Build and deploy subgraph
         run: |
