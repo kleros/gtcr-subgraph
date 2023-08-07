@@ -3,6 +3,9 @@ description: Generalized TCR
 repository: https://github.com/kleros/gtcr-subgraph
 schema:
   file: ./schema.graphql
+features:
+  - fullTextSearch
+  - ipfsOnEthereumContracts
 dataSources:
   - kind: ethereum/contract
     name: LightGTCRFactory
