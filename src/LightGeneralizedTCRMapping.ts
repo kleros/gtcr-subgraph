@@ -110,7 +110,7 @@ function getExtendedStatus(disputed: boolean, status: string): number {
     else return CHALLENGED_CLEARING_REQUEST_CODE;
   }
 
-  return CONTRACT_STATUS_EXTENDED.get(status);
+  return CONTRACT_STATUS_EXTENDED.get(status) || 0;
 }
 
 function getStatus(status: number): string {
@@ -323,8 +323,8 @@ export function handleNewItem(event: NewItem): void {
     return;
   }
 
-  let jsonObjValue = json.fromBytes(jsonStr as Bytes);
-  if (!jsonObjValue) {
+  let jsonObjValueAndSuccess = json.try_fromBytes(jsonStr as Bytes);
+  if (!jsonObjValueAndSuccess.isOk) {
     log.error(`Error getting json object value for graphItemID {}`, [
       graphItemID,
     ]);
@@ -333,7 +333,7 @@ export function handleNewItem(event: NewItem): void {
     return;
   }
 
-  let jsonObj = jsonObjValue.toObject();
+  let jsonObj = jsonObjValueAndSuccess.value.toObject();
   if (!jsonObj) {
     log.error(`Error converting object for graphItemID {}`, [graphItemID]);
     item.save();
