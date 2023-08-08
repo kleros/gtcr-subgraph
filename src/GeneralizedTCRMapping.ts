@@ -27,6 +27,7 @@ import {
   MetaEvidence as MetaEvidenceEvent,
   Evidence as EvidenceEvent,
   Ruling,
+  ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -167,10 +168,13 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.hasPaidRequester = true;
 
   let evidenceGroupIDToLRequest = new EvidenceGroupIDToRequest(
-    event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
-  evidenceGroupIDToLRequest.request = requestID
+    event.params._evidenceGroupID.toString() +
+      '@' +
+      event.address.toHexString(),
+  );
+  evidenceGroupIDToLRequest.request = requestID;
 
-  evidenceGroupIDToLRequest.save()
+  evidenceGroupIDToLRequest.save();
   round.save();
   request.save();
   item.save();
@@ -382,14 +386,14 @@ export function handleHasPaidAppealFee(event: HasPaidAppealFeeEvent): void {
 
   round.save();
 
-  let hasPaidAppealFeeID = roundID + "-" + event.params._side.toString()
-  let hasPaidAppealFee = new HasPaidAppealFee(hasPaidAppealFeeID)
+  let hasPaidAppealFeeID = roundID + '-' + event.params._side.toString();
+  let hasPaidAppealFee = new HasPaidAppealFee(hasPaidAppealFeeID);
   hasPaidAppealFee.item = graphItemID;
   hasPaidAppealFee.request = requestID;
   hasPaidAppealFee.round = roundID;
   hasPaidAppealFee.timestamp = event.block.timestamp;
   hasPaidAppealFee.side = BigInt.fromI32(event.params._side);
-  hasPaidAppealFee.save()
+  hasPaidAppealFee.save();
 }
 
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
@@ -411,11 +415,11 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
     let tcr = GeneralizedTCR.bind(event.address);
     let arbitratorAddr = tcr.arbitrator();
     let arbitrator = Arbitrator.load(arbitratorAddr.toHexString());
-    if (arbitrator) return; // Data source already created.
-
-    IArbitratorDataSourceTemplate.create(arbitratorAddr);
-    arbitrator = new Arbitrator(arbitratorAddr.toHexString());
-    arbitrator.save();
+    if (!arbitrator) {
+      IArbitratorDataSourceTemplate.create(arbitratorAddr);
+      arbitrator = new Arbitrator(arbitratorAddr.toHexString());
+      arbitrator.save();
+    }
   }
 
   let metaEvidence = MetaEvidence.load(
@@ -437,6 +441,17 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   } else {
     registry.clearingMetaEvidence = metaEvidence.id;
   }
+
+  registry.save();
+}
+
+export function handleConnectedTCRSet(event: ConnectedTCRSetEvent): void {
+  let registry = Registry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`Registry {} not found.`, [event.address.toHexString()]);
+    return;
+  }
+  registry.connectedTCR = event.params._connectedTCR;
 
   registry.save();
 }
@@ -530,26 +545,31 @@ export function handleAppealDecision(event: AppealDecision): void {
 
   round.appealed = true;
   round.appealedAt = event.block.timestamp;
-  round.save()
+  round.save();
 }
 
 export function handleEvidence(event: EvidenceEvent): void {
   let evidenceGroupIDToRequest = EvidenceGroupIDToRequest.load(
-        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
+    event.params._evidenceGroupID.toString() +
+      '@' +
+      event.address.toHexString(),
+  );
   if (!evidenceGroupIDToRequest) {
-    log.error('EvidenceGroupID {} not registered for {}.',
-              [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
+    log.error('EvidenceGroupID {} not registered for {}.', [
+      event.params._evidenceGroupID.toString(),
+      event.address.toHexString(),
+    ]);
     return;
   }
 
-  let request = Request.load(evidenceGroupIDToRequest.request)
+  let request = Request.load(evidenceGroupIDToRequest.request);
   if (!request) {
     log.error('Request {} not found.', [evidenceGroupIDToRequest.request]);
     return;
   }
 
   let evidence = new Evidence(
-      request.id + '-' + request.numberOfEvidence.toString(),
+    request.id + '-' + request.numberOfEvidence.toString(),
   );
 
   evidence.arbitrator = event.params._arbitrator;
@@ -567,15 +587,13 @@ export function handleEvidence(event: EvidenceEvent): void {
   evidence.save();
 }
 
-
 export function handleRuling(event: Ruling): void {
   let tcr = GeneralizedTCR.bind(event.address);
   let itemID = tcr.arbitratorDisputeIDToItem(
     event.address,
     event.params._disputeID,
   );
-  let graphItemID =
-    itemID.toHexString() + '@' + event.address.toHexString();
+  let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = Item.load(graphItemID);
   if (!item) {
     log.error('Item of graphItemID {} not found.', [graphItemID]);
@@ -592,5 +610,5 @@ export function handleRuling(event: Ruling): void {
 
   request.finalRuling = event.params._ruling;
   request.resolutionTime = event.block.timestamp;
-  request.save()
+  request.save();
 }

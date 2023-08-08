@@ -38,6 +38,7 @@ import {
   NewItem,
   RewardWithdrawn,
   Ruling,
+  ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 
 // Items on a TCR can be in 1 of 4 states:
@@ -358,7 +359,7 @@ export function handleNewItem(event: NewItem): void {
   }
   let values = valuesValue.toObject();
 
-  let identifier = 0
+  let identifier = 0;
   for (let i = 0; i < columns.length; i++) {
     let col = columns[i];
     let colObj = col.toObject();
@@ -385,16 +386,17 @@ export function handleNewItem(event: NewItem): void {
     itemProp.item = item.id;
 
     if (itemProp.isIdentifier) {
-      if (identifier == 0) item.key0 = itemProp.value
-      else if (identifier == 1) item.key1 = itemProp.value
-      else if (identifier == 2) item.key2 = itemProp.value
-      else if (identifier == 3) item.key3 = itemProp.value
-      else if (identifier == 4) item.key4 = itemProp.value
-      identifier += 1
+      if (identifier == 0) item.key0 = itemProp.value;
+      else if (identifier == 1) item.key1 = itemProp.value;
+      else if (identifier == 2) item.key2 = itemProp.value;
+      else if (identifier == 3) item.key3 = itemProp.value;
+      else if (identifier == 4) item.key4 = itemProp.value;
+      identifier += 1;
     }
 
     if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
-      item.keywords = (item.keywords as string) + ' | ' + (itemProp.value as string);
+      item.keywords =
+        (item.keywords as string) + ' | ' + (itemProp.value as string);
     }
 
     itemProp.save();
@@ -484,10 +486,13 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   }
 
   let evidenceGroupIDToLRequest = new EvidenceGroupIDToLRequest(
-        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
-  evidenceGroupIDToLRequest.request = requestID
+    event.params._evidenceGroupID.toString() +
+      '@' +
+      event.address.toHexString(),
+  );
+  evidenceGroupIDToLRequest.request = requestID;
 
-  evidenceGroupIDToLRequest.save()
+  evidenceGroupIDToLRequest.save();
   round.save();
   request.save();
   item.save();
@@ -713,7 +718,7 @@ export function handleAppealDecision(event: AppealDecision): void {
   round.appealed = true;
   round.appealedAt = event.block.timestamp;
 
-  round.save()
+  round.save();
 }
 
 export function handleStatusUpdated(event: ItemStatusChange): void {
@@ -930,23 +935,39 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   registry.save();
 }
 
+export function handleConnectedTCRSet(event: ConnectedTCRSetEvent): void {
+  let registry = LRegistry.load(event.address.toHexString());
+  if (!registry) {
+    log.error(`LRegistry {} not found.`, [event.address.toHexString()]);
+    return;
+  }
+  registry.connectedTCR = event.params._connectedTCR;
+
+  registry.save();
+}
+
 export function handleEvidence(event: EvidenceEvent): void {
   let evidenceGroupIDToLRequest = EvidenceGroupIDToLRequest.load(
-        event.params._evidenceGroupID.toString() + "@" + event.address.toHexString());
+    event.params._evidenceGroupID.toString() +
+      '@' +
+      event.address.toHexString(),
+  );
   if (!evidenceGroupIDToLRequest) {
-    log.error('EvidenceGroupID {} not registered for {}.',
-              [event.params._evidenceGroupID.toString(), event.address.toHexString()]);
+    log.error('EvidenceGroupID {} not registered for {}.', [
+      event.params._evidenceGroupID.toString(),
+      event.address.toHexString(),
+    ]);
     return;
   }
 
-  let request = LRequest.load(evidenceGroupIDToLRequest.request)
+  let request = LRequest.load(evidenceGroupIDToLRequest.request);
   if (!request) {
     log.error('Request {} not found.', [evidenceGroupIDToLRequest.request]);
     return;
   }
 
   let evidence = new LEvidence(
-      request.id + '-' + request.numberOfEvidence.toString(),
+    request.id + '-' + request.numberOfEvidence.toString(),
   );
 
   evidence.arbitrator = event.params._arbitrator;
@@ -970,8 +991,7 @@ export function handleRuling(event: Ruling): void {
     event.address,
     event.params._disputeID,
   );
-  let graphItemID =
-    itemID.toHexString() + '@' + event.address.toHexString();
+  let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = LItem.load(graphItemID);
   if (!item) {
     log.error(`LItem {} not found.`, [graphItemID]);
@@ -988,5 +1008,5 @@ export function handleRuling(event: Ruling): void {
 
   request.finalRuling = event.params._ruling;
   request.resolutionTime = event.block.timestamp;
-  request.save()
+  request.save();
 }
