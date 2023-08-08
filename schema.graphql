@@ -38,6 +38,8 @@ type Registry @entity {
   requests: [Request!]! @derivedFrom(field: "registry")
   "The number of items submitted to the list."
   numberOfItems: BigInt!
+  "Connected TCR. Can be the 0 address. In practice, will never be null."
+  connectedTCR: Bytes
 }
 
 type LRegistry @entity {
@@ -64,6 +66,8 @@ type LRegistry @entity {
   numberOfChallengedRegistrations: BigInt!
   "The total number of items in the challenged removal state."
   numberOfChallengedClearing: BigInt!
+  "Connected TCR. Can be the 0 address. In practice, will never be null."
+  connectedTCR: Bytes
 }
 
 type MetaEvidence @entity {
@@ -274,7 +278,7 @@ type LRound @entity {
   "The number of contributions made to this round"
   numberOfContributions: BigInt!
   "Whether this round was appealed."
-  appealed: Boolean!
+  appealed: Boolean
   "When this round was appealed, if it was appealed"
   appealedAt: BigInt
 }
@@ -318,7 +322,7 @@ type Round @entity {
   "The moment the round was created."
   creationTime: BigInt!
   "Whether this round was appealed"
-  appealed: Boolean!
+  appealed: Boolean
   "When this round was appealed, if it was appealed"
   appealedAt: BigInt
 }

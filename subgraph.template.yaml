@@ -1,5 +1,8 @@
-specVersion: 0.0.2
+specVersion: 0.0.4
 description: Generalized TCR
+features:
+  - fullTextSearch
+  - ipfsOnEthereumContracts
 repository: https://github.com/kleros/gtcr-subgraph
 schema:
   file: ./schema.graphql
@@ -90,6 +93,8 @@ templates:
           handler: handleEvidence
         - event: Ruling(indexed address,indexed uint256,uint256)
           handler: handleRuling
+        - event: ConnectedTCRSet(indexed address)
+          handler: handleConnectedTCRSet
       file: ./src/LightGeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: LIArbitrator
@@ -151,6 +156,8 @@ templates:
           handler: handleEvidence
         - event: Ruling(indexed address,indexed uint256,uint256)
           handler: handleRuling
+        - event: ConnectedTCRSet(indexed address)
+          handler: handleConnectedTCRSet
       file: ./src/GeneralizedTCRMapping.ts
   - kind: ethereum/contract
     name: IArbitrator
