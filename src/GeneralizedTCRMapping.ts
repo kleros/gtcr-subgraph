@@ -83,6 +83,7 @@ function buildNewRound(
   newRound.rulingTime = BigInt.fromI32(0);
   newRound.ruling = NONE;
   newRound.creationTime = timestamp;
+  newRound.appealed = false;
   return newRound;
 }
 
@@ -145,7 +146,9 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.numberOfEvidence = BigInt.fromI32(0);
 
   let roundID = requestID + '-0';
-  let round = new Round(roundID);
+  // Note that everything related to the deposit (e.g. contribution creation)
+  // is handled in handleContribution.
+  let round = buildNewRound(roundID, requestID, event.block.timestamp);
 
   let arbitrator = IArbitrator.bind(changetype<Address>(request.arbitrator));
   if (request.requestType == REGISTRATION_REQUESTED) {
@@ -161,15 +164,8 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   }
 
   round.feeRewards = round.amountPaidRequester;
-  round.amountPaidChallenger = BigInt.fromI32(0);
   round.hasPaidRequester = true;
-  round.hasPaidChallenger = false;
-  round.request = request.id;
-  round.appealPeriodStart = BigInt.fromI32(0);
-  round.appealPeriodEnd = BigInt.fromI32(0);
-  round.rulingTime = BigInt.fromI32(0);
-  round.ruling = NONE;
-  round.creationTime = event.block.timestamp;
+
   let evidenceGroupIDToLRequest = new EvidenceGroupIDToRequest(
     event.params._evidenceGroupID.toString() + "@" + event.address.toHexString())
   evidenceGroupIDToLRequest.request = requestID
