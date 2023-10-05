@@ -4,10 +4,8 @@ const mustache = require('mustache');
 const chainNameToChainId = {
   xdai: 100,
   mainnet: 1,
-  kovan: 42,
-  rinkeby: 4,
   goerli: 5,
-  "arbitrum-rinkeby": 421611
+  sepolia: 11155111,
 };
 
 async function main() {
