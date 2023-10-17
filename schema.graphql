@@ -23,6 +23,44 @@ type Arbitrator @entity {
   id: ID!
 }
 
+type EvidenceGroup @entity {
+  "evidenceGroupId@tcrAddress"
+  id: ID!
+  "Evidences posted to this evidenceGroupId"
+  evidences: [Evidence!]! @derivedFrom(field: "evidenceGroup")
+  "Number of evidences posted in this group"
+  numberOfEvidence: BigInt!
+}
+
+type Evidence @entity {
+  "evidenceGroupId@tcrAddress-number"
+  id: ID!
+  "The arbitrator's address."
+  arbitrator: Bytes!
+  "The evidence group"
+  evidenceGroup: EvidenceGroup!
+  "The address of the party that sent this piece of evidence."
+  party: Bytes!
+  "The URI of the evidence file."
+  URI: String!
+  "This is the <number>th evidence submitted (starting at 0) for <request>."
+  number: BigInt!
+  "When was this evidence posted"
+  timestamp: BigInt!
+  "Tx hash of the evidence submission"
+  txHash: Bytes!
+  "Name of the evidence"
+  name: String
+  "Title of the evidence"
+  title: String
+  "Description of the evidence"
+  description: String
+  "URI of the attached file"
+  fileURI: String
+  "File extension of the attached file"
+  fileTypeExtension: String
+}
+
 type Registry @entity {
   "The registry address"
   id: ID!
@@ -75,62 +113,6 @@ type MetaEvidence @entity {
   id: ID!
   "The URI of the meta evidence file."
   URI: String!
-}
-
-type Evidence @entity {
-  "<Request.id>-<evidence number>"
-  id: ID!
-  "The arbitrator's address."
-  arbitrator: Bytes!
-  "The ID of the evidence group (see {L,}Request.evidenceGroupID)."
-  evidenceGroupID: BigInt!
-  "The address of the party that sent this piece of evidence."
-  party: Bytes!
-  "The URI of the evidence file."
-  URI: String!
-  "The item this evidence was submitted to."
-  item: Item!
-  "The latest request when this evidence was submitted."
-  request: Request
-  "This is the <number>th evidence submitted (starting at 0) for <request>."
-  number: BigInt!
-  "When was this evidence posted"
-  timestamp: BigInt!
-}
-
-type LEvidence @entity {
-  "<Request.id>-<evidence number>"
-  id: ID!
-  "The arbitrator's address."
-  arbitrator: Bytes!
-  "The ID of the evidence group (see {L,}Request.evidenceGroupID)."
-  evidenceGroupID: BigInt!
-  "The address of the party that sent this piece of evidence."
-  party: Bytes!
-  "The URI of the evidence file."
-  URI: String!
-  "The item this evidence was submitted to."
-  item: LItem!
-  "The latest request when this evidence was submitted."
-  request: LRequest
-  "This is the <number>th evidence submitted (starting at 0) for <request>."
-  number: BigInt!
-  "When was this evidence posted"
-  timestamp: BigInt!
-}
-
-type EvidenceGroupIDToLRequest @entity {
-  "<EvidenceGroupID>@<contract address>"
-  id: ID!
-  "LRequest ID"
-  request: LRequest!
-}
-
-type EvidenceGroupIDToRequest @entity {
-  "<EvidenceGroupID>@<contract address>"
-  id: ID!
-  "Request ID"
-  request: Request!
 }
 
 type LItem @entity {
@@ -219,18 +201,14 @@ type LRequest @entity {
   disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [LRound!]! @derivedFrom(field: "request")
-  "The ID of the evidence group for this request."
-  evidenceGroupID: BigInt!
+  "The evidence group for this request."
+  evidenceGroup: EvidenceGroup!
   "The total number of rounds on this request."
   numberOfRounds: BigInt!
   "Whether it was requested to add or remove the item to/from the list."
   requestType: Status!
   "The URI to the meta evidence used for this request."
   metaEvidence: MetaEvidence!
-  "Evidence provided regarding this request (matching evidenceGroupID)."
-  evidences: [LEvidence!]! @derivedFrom(field: "request")
-  "Number of evidences."
-  numberOfEvidence: BigInt!
   "The item this request belongs to."
   item: LItem!
   "The registry where this request was submitted."
@@ -273,6 +251,10 @@ type LRound @entity {
   rulingTime: BigInt!
   "The ruling given by the arbitrator."
   ruling: Ruling!
+  "The tx hash of the moment appealing became possible"
+  txHashAppealPossible: Bytes
+  "The tx hash of the moment the round was appealed"
+  txHashAppealDecision: Bytes
   "The moment the round was created."
   creationTime: BigInt!
   "The contributions made to this round."
@@ -321,6 +303,10 @@ type Round @entity {
   rulingTime: BigInt!
   "The ruling given by the arbitrator."
   ruling: Ruling!
+  "The tx hash of the moment appealing became possible"
+  txHashAppealPossible: Bytes
+  "The tx hash of the moment the round was appealed"
+  txHashAppealDecision: Bytes
   "The moment the round was created."
   creationTime: BigInt!
   "Whether this round was appealed"
@@ -383,16 +369,14 @@ type Request @entity {
   disputeOutcome: Ruling!
   "Tracks each round of a dispute in the form rounds[roundID]."
   rounds: [Round!]! @derivedFrom(field: "request")
-  "The ID of the evidence group for this request."
-  evidenceGroupID: BigInt!
+  "The evidence group for this request."
+  evidenceGroup: EvidenceGroup!
   "The total number of rounds on this request."
   numberOfRounds: BigInt!
   "Whether it was requested to add or remove the item to/from the list."
   requestType: Status!
   "The URI to the meta evidence used for this request."
   metaEvidence: MetaEvidence!
-  "Number of evidences."
-  numberOfEvidence: BigInt!
   "The item this request belongs to."
   item: Item!
   "The registry where this request was submitted."
@@ -403,6 +387,10 @@ type Request @entity {
   resolutionTime: BigInt!
   "Only set if the request was settled by a dispute. Used by the twitter bot"
   finalRuling: BigInt
+  "The hash of the transaction that created this request."
+  creationTx: Bytes!
+  "The hash of the transaction that solved this request."
+  resolutionTx: Bytes
 }
 
 type HasPaidAppealFee @entity {

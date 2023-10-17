@@ -1,5 +1,12 @@
 /* eslint-disable prefer-const */
-import { Bytes, log, BigInt, Address } from '@graphprotocol/graph-ts';
+import {
+  Bytes,
+  BigInt,
+  Address,
+  ipfs,
+  json,
+  log,
+} from '@graphprotocol/graph-ts';
 import {
   Item,
   Request,
@@ -7,9 +14,9 @@ import {
   Registry,
   MetaEvidence,
   Arbitrator,
-  EvidenceGroupIDToRequest,
   Evidence,
   HasPaidAppealFee,
+  EvidenceGroup,
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -143,8 +150,21 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   request.submissionTime = event.block.timestamp;
   request.numberOfRounds = BigInt.fromI32(1);
   request.requestType = item.status;
-  request.evidenceGroupID = event.params._evidenceGroupID;
-  request.numberOfEvidence = BigInt.fromI32(0);
+  request.creationTx = event.transaction.hash;
+
+  // Handle the evidenceGroup situation. It might already exist
+  let evidenceGroupId =
+    event.params._evidenceGroupID.toString() +
+    '@' +
+    event.address.toHexString();
+  let evidenceGroup = EvidenceGroup.load(evidenceGroupId);
+  if (!evidenceGroup) {
+    evidenceGroup = new EvidenceGroup(evidenceGroupId);
+    evidenceGroup.numberOfEvidence = BigInt.fromI32(0);
+    evidenceGroup.save();
+  }
+
+  request.evidenceGroup = evidenceGroupId;
 
   let roundID = requestID + '-0';
   // Note that everything related to the deposit (e.g. contribution creation)
@@ -169,14 +189,6 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
   round.feeRewards = round.amountPaidRequester;
   round.hasPaidRequester = true;
 
-  let evidenceGroupIDToLRequest = new EvidenceGroupIDToRequest(
-    event.params._evidenceGroupID.toString() +
-      '@' +
-      event.address.toHexString(),
-  );
-  evidenceGroupIDToLRequest.request = requestID;
-
-  evidenceGroupIDToLRequest.save();
   round.save();
   request.save();
   item.save();
@@ -221,6 +233,7 @@ export function handleRequestResolved(event: ItemStatusChange): void {
   request.resolved = true;
   request.resolutionTime = event.block.timestamp;
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
+  request.resolutionTx = event.transaction.hash;
 
   request.save();
 }
@@ -471,7 +484,10 @@ export function handleAppealPossible(event: AppealPossible): void {
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = Item.load(graphItemID);
   if (!item) {
-    log.error('Item of graphItemID {} not found.', [graphItemID]);
+    log.error('Appeal Possible Item of graphItemID {} not found. tx {}', [
+      graphItemID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
@@ -479,7 +495,10 @@ export function handleAppealPossible(event: AppealPossible): void {
     item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
   let request = Request.load(requestID);
   if (!request) {
-    log.error(`Request of requestID {} not found.`, [requestID]);
+    log.error(`Appeal Possible Request of requestID {} not found. tx {}`, [
+      requestID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
@@ -489,7 +508,10 @@ export function handleAppealPossible(event: AppealPossible): void {
     request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
   let round = Round.load(roundID);
   if (!round) {
-    log.error(`Round of roundID {} not found.`, [roundID]);
+    log.error(`Appeal Possible Round of roundID {} not found. tx {}`, [
+      roundID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
@@ -498,6 +520,7 @@ export function handleAppealPossible(event: AppealPossible): void {
   round.appealPeriodStart = appealPeriod.value0;
   round.appealPeriodEnd = appealPeriod.value1;
   round.rulingTime = event.block.timestamp;
+  round.txHashAppealPossible = event.transaction.hash;
 
   let currentRuling = arbitrator.currentRuling(request.disputeID);
   round.ruling = currentRuling.equals(BigInt.fromI32(0))
@@ -523,7 +546,10 @@ export function handleAppealDecision(event: AppealDecision): void {
     itemID.toHexString() + '@' + event.params._arbitrable.toHexString();
   let item = Item.load(graphItemID);
   if (!item) {
-    log.error('Item of graphItemID {} not found.', [graphItemID]);
+    log.error('Appeal Decision Item of graphItemID {} not found. tx {}', [
+      graphItemID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
@@ -531,7 +557,10 @@ export function handleAppealDecision(event: AppealDecision): void {
     item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
   let request = Request.load(requestID);
   if (!request) {
-    log.error(`Request of requestID {} not found.`, [requestID]);
+    log.error(`Appeal Decision Request of requestID {} not found. tx {}`, [
+      requestID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
@@ -541,58 +570,135 @@ export function handleAppealDecision(event: AppealDecision): void {
     request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
   let round = Round.load(roundID);
   if (!round) {
-    log.error(`Round of roundID {} not found.`, [roundID]);
+    log.error(`Appeal Decision Round of roundID {} not found. tx {}`, [
+      roundID,
+      event.transaction.hash.toHexString(),
+    ]);
     return;
   }
 
   round.appealed = true;
   round.appealedAt = event.block.timestamp;
+  round.txHashAppealDecision = event.transaction.hash;
   round.save();
 }
 
 export function handleEvidence(event: EvidenceEvent): void {
-  let evidenceGroupIDToRequest = EvidenceGroupIDToRequest.load(
+  let evidenceGroupId =
     event.params._evidenceGroupID.toString() +
-      '@' +
-      event.address.toHexString(),
-  );
-  if (!evidenceGroupIDToRequest) {
-    log.error('EvidenceGroupID {} not registered for {}.', [
-      event.params._evidenceGroupID.toString(),
-      event.address.toHexString(),
-    ]);
-    return;
-  }
-
-  let request = Request.load(evidenceGroupIDToRequest.request);
-  if (!request) {
-    log.error('Request {} not found.', [evidenceGroupIDToRequest.request]);
-    return;
+    '@' +
+    event.address.toHexString();
+  let evidenceGroup = EvidenceGroup.load(evidenceGroupId);
+  if (!evidenceGroup) {
+    // Evidence was emitted before the evidence group was created. Create group
+    evidenceGroup = new EvidenceGroup(
+      event.params._evidenceGroupID.toString() +
+        '@' +
+        event.address.toHexString(),
+    );
+    // Will be created with 0 evidence, will increment to 1 within this handler.
+    evidenceGroup.numberOfEvidence = BigInt.fromI32(0);
   }
 
   let evidence = new Evidence(
-    request.id + '-' + request.numberOfEvidence.toString(),
+    evidenceGroupId + '-' + evidenceGroup.numberOfEvidence.toString(),
   );
 
   evidence.arbitrator = event.params._arbitrator;
-  evidence.evidenceGroupID = event.params._evidenceGroupID;
+  evidence.evidenceGroup = evidenceGroupId;
   evidence.party = event.params._party;
   evidence.URI = event.params._evidence;
-  evidence.request = request.id;
-  evidence.number = request.numberOfEvidence;
-  evidence.item = request.item;
+  evidence.number = evidenceGroup.numberOfEvidence;
   evidence.timestamp = event.block.timestamp;
+  evidence.txHash = event.transaction.hash;
 
-  request.numberOfEvidence = request.numberOfEvidence.plus(BigInt.fromI32(1));
+  evidenceGroup.numberOfEvidence = evidenceGroup.numberOfEvidence.plus(
+    BigInt.fromI32(1),
+  );
 
-  request.save();
+  // Try to parse and store evidence fields.
+  let jsonStr = ipfs.cat(event.params._evidence);
+  if (!jsonStr) {
+    log.warning('Failed to fetch evidence {}', [event.params._evidence]);
+    evidenceGroup.save();
+    evidence.save();
+    return;
+  }
+
+  let jsonObjValueAndSuccess = json.try_fromBytes(jsonStr as Bytes);
+  if (!jsonObjValueAndSuccess.isOk) {
+    log.warning(`Error getting json object value for evidence {}`, [
+      event.params._evidence,
+    ]);
+    evidenceGroup.save();
+    evidence.save();
+    return;
+  }
+
+  let jsonObj = jsonObjValueAndSuccess.value.toObject();
+  if (!jsonObj) {
+    log.warning(`Error converting object for evidence {}`, [
+      event.params._evidence,
+    ]);
+    evidenceGroup.save();
+    evidence.save();
+    return;
+  }
+
+  let nameValue = jsonObj.get('name');
+  if (!nameValue) {
+    log.warning(`Error getting name value for evidence {}`, [
+      event.params._evidence,
+    ]);
+  } else {
+    evidence.name = nameValue.toString();
+  }
+
+  // Somehow Curate uses "title"?? so fetch in case
+  let titleValue = jsonObj.get('title');
+  if (!titleValue) {
+    log.warning(`Error getting title value for evidence {}`, [
+      event.params._evidence,
+    ]);
+  } else {
+    evidence.title = titleValue.toString();
+  }
+
+  let descriptionValue = jsonObj.get('description');
+  if (!descriptionValue) {
+    log.warning(`Error getting description value for evidence {}`, [
+      event.params._evidence,
+    ]);
+  } else {
+    evidence.description = descriptionValue.toString();
+  }
+
+  let fileURIValue = jsonObj.get('fileURI');
+  if (!fileURIValue) {
+    log.warning(`Error getting fileURI value for evidence {}`, [
+      event.params._evidence,
+    ]);
+  } else {
+    evidence.fileURI = fileURIValue.toString();
+  }
+
+  let fileTypeExtensionValue = jsonObj.get('fileTypeExtension');
+  if (!fileTypeExtensionValue) {
+    log.warning(`Error getting fileTypeExtension value for evidence {}`, [
+      event.params._evidence,
+    ]);
+  } else {
+    evidence.fileTypeExtension = fileTypeExtensionValue.toString();
+  }
+
+  evidenceGroup.save();
   evidence.save();
 }
 
 export function handleRuling(event: Ruling): void {
   let tcr = GeneralizedTCR.bind(event.address);
   let itemID = tcr.arbitratorDisputeIDToItem(
-    event.address,
+    event.params._arbitrator,
     event.params._disputeID,
   );
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
