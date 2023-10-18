@@ -16,10 +16,10 @@ import {
   LRound,
   LRegistry,
   MetaEvidence,
-  Arbitrator,
   LContribution,
   EvidenceGroup,
   Evidence,
+  LArbitrator,
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -541,12 +541,9 @@ export function handleContribution(event: Contribution): void {
     let roundInfo = tcr.getRoundInfo(
       event.params._itemID,
       event.params._requestID,
-      event.params._roundID.minus(BigInt.fromI32(1)),
+      event.params._roundID,
     );
 
-    // we cannot get round.appealed from this roundInfo because
-    // of a smart contract bug.
-    // can only be set on AppealDecision.
     round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
     round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
     round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
@@ -558,20 +555,6 @@ export function handleContribution(event: Contribution): void {
     round.lastFundedRequester = event.block.timestamp;
   } else {
     round.lastFundedChallenger = event.block.timestamp;
-  }
-
-  let requestInfo = tcr.getRequestInfo(
-    event.params._itemID,
-    event.params._requestID,
-  );
-  if (round.appealed) {
-    // ERROR: NOT a boolean
-    // requestInfo.value5 is requestInfo.numberOfRounds.
-    let newRoundID =
-      requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(1)).toString();
-    let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
-    newRound.save();
-    request.numberOfRounds = requestInfo.value5;
   }
 
   let contributionID = roundID + '-' + round.numberOfContributions.toString();
@@ -587,7 +570,6 @@ export function handleContribution(event: Contribution): void {
 
   contribution.save();
   round.save();
-  request.save();
 }
 
 export function handleRequestChallenged(event: Dispute): void {
@@ -741,7 +723,15 @@ export function handleAppealDecision(event: AppealDecision): void {
   round.appealedAt = event.block.timestamp;
   round.txHashAppealDecision = event.transaction.hash;
 
+  // create new round
+  let newRoundID = request.id + '-' + request.numberOfRounds.toString();
+  let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
+
   round.save();
+  newRound.save();
+
+  request.numberOfRounds = request.numberOfRounds.plus(BigInt.fromI32(1));
+  request.save();
 }
 
 export function handleStatusUpdated(event: ItemStatusChange): void {
@@ -927,10 +917,10 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
     // to start monitoring it for events (if we aren't already).
     let tcr = LightGeneralizedTCR.bind(event.address);
     let arbitratorAddr = tcr.arbitrator();
-    let arbitrator = Arbitrator.load(arbitratorAddr.toHexString());
+    let arbitrator = LArbitrator.load(arbitratorAddr.toHexString());
     if (!arbitrator) {
       IArbitratorDataSourceTemplate.create(arbitratorAddr);
-      arbitrator = new Arbitrator(arbitratorAddr.toHexString());
+      arbitrator = new LArbitrator(arbitratorAddr.toHexString());
       arbitrator.save();
     }
   }

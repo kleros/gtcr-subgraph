@@ -23,6 +23,11 @@ type Arbitrator @entity {
   id: ID!
 }
 
+type LArbitrator @entity {
+  "The address of the arbitrator"
+  id: ID!
+}
+
 type EvidenceGroup @entity {
   "evidenceGroupId@tcrAddress"
   id: ID!
