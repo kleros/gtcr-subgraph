@@ -157,11 +157,13 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
       .submissionBaseDeposit()
       .plus(arbitrator.arbitrationCost(request.arbitratorExtraData));
     request.metaEvidence = registry.registrationMetaEvidence;
+    request.deposit = tcr.submissionBaseDeposit();
   } else {
     round.amountPaidRequester = tcr
       .removalBaseDeposit()
       .plus(arbitrator.arbitrationCost(request.arbitratorExtraData));
     request.metaEvidence = registry.clearingMetaEvidence;
+    request.deposit = tcr.removalBaseDeposit();
   }
 
   round.feeRewards = round.amountPaidRequester;

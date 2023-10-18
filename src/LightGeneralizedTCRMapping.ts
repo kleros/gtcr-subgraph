@@ -425,7 +425,6 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     ]);
     return;
   }
-
   // `previousStatus` and `newStatus` are used for accounting.
   // Note that if this is the very first request of an item,
   // item.status and item.dispute are dirty because they were set by
@@ -464,10 +463,13 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.requestType = item.status;
   request.evidenceGroupID = event.params._evidenceGroupID;
   request.creationTx = event.transaction.hash;
-  if (request.requestType == REGISTRATION_REQUESTED)
+  if (request.requestType == REGISTRATION_REQUESTED) {
+    request.deposit = tcr.submissionBaseDeposit();
     request.metaEvidence = registry.registrationMetaEvidence;
-  else request.metaEvidence = registry.clearingMetaEvidence;
-
+  } else {
+    request.deposit = tcr.removalBaseDeposit();
+    request.metaEvidence = registry.clearingMetaEvidence;
+  }
   let roundID = requestID + '-0';
 
   // Note that everything related to the deposit (e.g. contribution creation)
