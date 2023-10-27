@@ -9,6 +9,8 @@ on:
         default: 'xdai'
         type: choice
         options:
+          - goerli
+          - sepolia
           - xdai
           - mainnet
       environment:
