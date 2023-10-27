@@ -15,7 +15,7 @@
     "publish:goerli": "yarn build:goerli && graph deploy --product hosted-service kleros/curate-goerli",
     "codegen:sepolia": "node render-templates.js sepolia && graph codegen && yarn fix-schema.ts",
     "build:sepolia": "yarn codegen:sepolia && graph build",
-    "publish:sepolia": "yarn build:goerli && graph deploy --studio kleros/curate-sepolia",
+    "publish:sepolia": "yarn build:sepolia && graph deploy --studio kleros/curate-sepolia",
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
     "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",
