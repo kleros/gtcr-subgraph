@@ -54,6 +54,11 @@ type Evidence @entity {
   timestamp: BigInt!
   "Tx hash of the evidence submission"
   txHash: Bytes!
+  metadata: EvidenceMetadata
+}
+
+type EvidenceMetadata @entity {
+  id: ID!
   "Name of the evidence"
   name: String
   "Title of the evidence"
@@ -127,20 +132,6 @@ type LItem @entity {
   itemID: Bytes!
   "The data describing the item."
   data: String!
-  "The parsed data describing the item."
-  props: [ItemProp!]! @derivedFrom(field: "item")
-  "First indexable value of the json file."
-  key0: String
-  "Second indexable value of the json file."
-  key1: String
-  "Third indexable value of the json file."
-  key2: String
-  "Fourth indexable value of the json file."
-  key3: String
-  "Fifth indexable value of the json file."
-  key4: String
-  "The item identifiers combined as a single string."
-  keywords: String
   "The current status of the item."
   status: Status!
   "List of status change requests made for the item in the form requests[requestID]."
@@ -161,14 +152,36 @@ type LItem @entity {
   latestRequester: Bytes!
   "The account that challenged the latest request, if any."
   latestChallenger: Bytes!
+  metadata: LItemMetadata
 }
 
+type LItemMetadata @entity {
+  "ipfs cid"
+  id: ID!
+  "The parsed data describing the item."
+  props: [ItemProp!]! @derivedFrom(field: "item")
+  "First indexable value of the json file."
+  key0: String
+  "Second indexable value of the json file."
+  key1: String
+  "Third indexable value of the json file."
+  key2: String
+  "Fourth indexable value of the json file."
+  key3: String
+  "Fifth indexable value of the json file."
+  key4: String
+  "The item identifiers combined as a single string."
+  keywords: String
+  "The item this metadata belongs to"
+  item: LItem! @derivedFrom(field: "metadata")
+
+}
 type _Schema_
   @fulltext(
     name: "itemSearch"
     language: en
     algorithm: rank
-    include: [{ entity: "LItem", fields: [{ name: "keywords" }] }]
+    include: [{ entity: "LItemMetadata", fields: [{ name: "keywords" }] }]
   )
 
 type ItemProp @entity {
@@ -178,7 +191,7 @@ type ItemProp @entity {
   description: String!
   isIdentifier: Boolean!
   value: String
-  item: LItem!
+  item: LItemMetadata!
 }
 
 type LRequest @entity {
