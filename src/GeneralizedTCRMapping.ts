@@ -127,13 +127,15 @@ export function handleRequestSubmitted(event: RequestEvidenceGroupID): void {
 
   let requestID =
     graphItemID + '-' + itemInfo.value2.minus(BigInt.fromI32(1)).toString();
+  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
 
   let request = new Request(requestID);
   request.disputed = false;
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
-  request.requester = event.transaction.from;
+  request.requester = requestInfo.value4[1];
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -257,16 +259,16 @@ export function handleRequestChallenged(event: Dispute): void {
     log.error(`Request of requestID {} not found.`, [requestID]);
     return;
   }
-
-  request.disputed = true;
-  request.challenger = event.transaction.from;
-  request.numberOfRounds = BigInt.fromI32(2);
-  request.disputeID = event.params._disputeID;
-
   let requestInfo = tcr.getRequestInfo(
     itemID,
     itemInfo.value2.minus(BigInt.fromI32(1)),
   );
+
+  request.disputed = true;
+  request.challenger = requestInfo.value4[2];
+  request.numberOfRounds = BigInt.fromI32(2);
+  request.disputeID = event.params._disputeID;
+
   let roundID =
     requestID + '-' + requestInfo.value5.minus(BigInt.fromI32(2)).toString();
   let round = Round.load(roundID);

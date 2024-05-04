@@ -298,6 +298,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
   let requestID = graphItemID + '-' + requestIndex.toString();
 
   let request = new LRequest(requestID);
@@ -305,7 +306,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
-  request.requester = event.transaction.from;
+  request.requester = requestInfo.value4[1];
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -446,6 +447,7 @@ export function handleRequestChallenged(event: Dispute): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(itemID, requestIndex);
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
@@ -454,7 +456,7 @@ export function handleRequestChallenged(event: Dispute): void {
   }
 
   request.disputed = true;
-  request.challenger = event.transaction.from;
+  request.challenger = requestInfo.value4[2];
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
