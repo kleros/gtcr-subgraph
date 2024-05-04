@@ -4,9 +4,9 @@
   "description": "Subgraph for Generalized TCR contracts",
   "scripts": {
     "fix-schema.ts": "replace-in-file '/(;\\s*if \\()value === null/mg' '$1value === null || value.kind === ValueKind.NULL' generated/schema.ts --isRegex",
-    "codegen:xdai": "node render-templates.js xdai && graph codegen && yarn fix-schema.ts",
-    "build:xdai": "yarn codegen:xdai && graph build",
-    "publish:xdai": "yarn build:xdai && graph deploy --product hosted-service kleros/legacy-curate-xdai",
+    "codegen:gnosis": "node render-templates.js gnosis && graph codegen && yarn fix-schema.ts",
+    "build:gnosis": "yarn codegen:gnosis && graph build",
+    "publish:gnosis": "yarn build:gnosis && graph deploy --product subgraph-studio legacy-curate-gnosis",
     "codegen:mainnet": "node render-templates.js mainnet && graph codegen && yarn fix-schema.ts",
     "build:mainnet": "yarn codegen:mainnet && graph build",
     "publish:mainnet": "yarn build:mainnet && graph deploy --product hosted-service kleros/curate",
