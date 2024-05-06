@@ -3,7 +3,10 @@ import { EvidenceMetadata } from '../../generated/schema';
 
 export function handleLGTCREvidenceMetadata(content: Bytes): void {
   const id = dataSource.stringParam();
-  const evidence = new EvidenceMetadata(id);
+  const context = dataSource.context();
+  const evidenceId = context.getString('evidenceId');
+
+  const evidence = new EvidenceMetadata(`${id}-${evidenceId}`);
   const value = json.fromBytes(content).toObject();
 
   log.debug(`ipfs hash : {}, content : {}`, [id, content.toString()]);

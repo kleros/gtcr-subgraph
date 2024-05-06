@@ -4,13 +4,14 @@ import { JSONValueToBool, JSONValueToMaybeString } from '../utils';
 
 export function handleLItemMetadata(content: Bytes): void {
   const id = dataSource.stringParam();
-  const metadata = new LItemMetadata(id);
 
   const value = json.fromBytes(content).toObject();
-  const context = dataSource.context();
 
+  const context = dataSource.context();
   const graphItemID = context.getString('graphItemID');
   const address = context.getString('address');
+
+  const metadata = new LItemMetadata(`${id}-${graphItemID}`);
 
   metadata.keywords = address;
 

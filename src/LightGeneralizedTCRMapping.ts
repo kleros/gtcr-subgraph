@@ -250,7 +250,9 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
   const ipfsHash = extractPath(event.params._data);
-  item.metadata = ipfsHash;
+  item.metadata = `${ipfsHash}-${graphItemID}`;
+
+  log.debug('Creating datasource for ipfs hash : {}', [ipfsHash]);
 
   const context = new DataSourceContext();
   context.setString('graphItemID', graphItemID);
@@ -850,8 +852,11 @@ export function handleEvidence(event: EvidenceEvent): void {
   );
 
   const ipfsHash = extractPath(event.params._evidence);
-  evidence.metadata = ipfsHash;
-  EvidenceMetadataTemplate.create(ipfsHash);
+  evidence.metadata = `${ipfsHash}-${evidence.id}`;
+
+  const context = new DataSourceContext();
+  context.setString('evidenceId', evidence.id);
+  EvidenceMetadataTemplate.createWithContext(ipfsHash, context);
 
   evidenceGroup.save();
   evidence.save();

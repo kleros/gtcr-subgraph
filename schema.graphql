@@ -156,7 +156,7 @@ type LItem @entity {
 }
 
 type LItemMetadata @entity {
-  "ipfs cid"
+  "ipfs cid - Litem ID"
   id: ID!
   "The parsed data describing the item."
   props: [ItemProp!]! @derivedFrom(field: "item")

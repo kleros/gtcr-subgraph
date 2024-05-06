@@ -1,5 +1,11 @@
 /* eslint-disable prefer-const */
-import { Bytes, BigInt, Address, log } from '@graphprotocol/graph-ts';
+import {
+  Bytes,
+  BigInt,
+  Address,
+  log,
+  DataSourceContext,
+} from '@graphprotocol/graph-ts';
 import {
   Item,
   Request,
@@ -614,8 +620,12 @@ export function handleEvidence(event: EvidenceEvent): void {
   );
 
   const ipfsHash = extractPath(event.params._evidence);
-  evidence.metadata = ipfsHash;
-  EvidenceMetadataTemplate.create(ipfsHash);
+  evidence.metadata = `${ipfsHash}-${evidence.id}`;
+
+  const context = new DataSourceContext();
+  context.setString('evidenceId', evidence.id);
+
+  EvidenceMetadataTemplate.createWithContext(ipfsHash, context);
 
   evidenceGroup.save();
   evidence.save();
