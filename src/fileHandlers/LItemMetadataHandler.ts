@@ -3,7 +3,7 @@ import { ItemProp, LItemMetadata } from '../../generated/schema';
 import { JSONValueToBool, JSONValueToMaybeString } from '../utils';
 
 export function handleLItemMetadata(content: Bytes): void {
-  const id = dataSource.stringParam();
+  const ipfsHash = dataSource.stringParam();
 
   const value = json.fromBytes(content).toObject();
 
@@ -11,11 +11,13 @@ export function handleLItemMetadata(content: Bytes): void {
   const graphItemID = context.getString('graphItemID');
   const address = context.getString('address');
 
-  const metadata = new LItemMetadata(`${id}-${graphItemID}`);
+  const id = `${ipfsHash}-${graphItemID}`;
+
+  const metadata = new LItemMetadata(id);
 
   metadata.keywords = address;
 
-  log.debug(`ipfs hash : {}, content : {}`, [id, content.toString()]);
+  log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
   if (!value) {
     log.warning(`Error converting object for graphItemId {}`, [graphItemID]);

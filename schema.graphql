@@ -57,7 +57,7 @@ type Evidence @entity {
   metadata: EvidenceMetadata
 }
 
-type EvidenceMetadata @entity {
+type EvidenceMetadata @entity(immutable: true) {
   id: ID!
   "Name of the evidence"
   name: String
@@ -155,7 +155,7 @@ type LItem @entity {
   metadata: LItemMetadata
 }
 
-type LItemMetadata @entity {
+type LItemMetadata @entity(immutable: true) {
   "ipfs cid - Litem ID"
   id: ID!
   "The parsed data describing the item."
@@ -184,7 +184,7 @@ type _Schema_
     include: [{ entity: "LItemMetadata", fields: [{ name: "keywords" }] }]
   )
 
-type ItemProp @entity {
+type ItemProp @entity(immutable: true) {
   id: ID!
   type: String!
   label: String!
