@@ -25,6 +25,7 @@ import {
   LIArbitrator as IArbitratorDataSourceTemplate,
   LGTCREvidence as EvidenceMetadataTemplate,
   LItemMetadata as LItemMetadataTemplate,
+  LRegistryMetadata as LRegistryMetadataTemplate,
 } from '../generated/templates';
 import {
   Contribution,
@@ -794,6 +795,18 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   }
 
   metaEvidence.URI = event.params._evidence;
+
+  const ipfsHash = extractPath(event.params._evidence);
+  registry.metadata = `${ipfsHash}-${event.address.toHexString()}-${
+    registry.metaEvidenceCount
+  }`;
+
+  const context = new DataSourceContext();
+  context.setString('address', event.address.toHexString());
+  context.setBigInt('count', registry.metaEvidenceCount);
+
+  LRegistryMetadataTemplate.createWithContext(ipfsHash, context);
+
   metaEvidence.save();
 
   if (

@@ -223,3 +223,15 @@ templates:
       abis:
         - name: LightGeneralizedTCR
           file: ./abis/LightGeneralizedTCR.json
+  - name: LRegistryMetadata
+    kind: file/ipfs
+    mapping:
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/fileHandlers/LRegistryMetadataHandler.ts
+      handler: handleLRegistryMetadata
+      entities:
+        - LRegistryMetadata
+      abis:
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json

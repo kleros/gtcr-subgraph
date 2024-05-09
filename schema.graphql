@@ -116,7 +116,23 @@ type LRegistry @entity {
   numberOfChallengedClearing: BigInt!
   "Connected TCR. Can be the 0 address. In practice, will never be null."
   connectedTCR: Bytes
+  metadata: LRegistryMetadata
 }
+
+type LRegistryMetadata @entity {
+ id: ID!
+ title: String
+ description: String
+ itemName: String
+ itemNamePlural: String
+ isConnectedTCR: Boolean
+ requireRemovalEvidence: Boolean
+ isTCRofTcrs: Boolean
+ parentTCRAddress: String
+ relTcrDisabled: Boolean
+ registry: LRegistry @derivedFrom(field: "metadata")
+}
+
 
 type MetaEvidence @entity {
   "The meta evidence ID."
@@ -182,6 +198,12 @@ type _Schema_
     language: en
     algorithm: rank
     include: [{ entity: "LItemMetadata", fields: [{ name: "keywords" }] }]
+  )
+  @fulltext(
+    name: "registrySearch"
+    language: en
+    algorithm: rank
+    include: [{ entity: "LRegistryMetadata", fields: [{ name: "title" }, { name: "description" }, { name: "itemName" }] }]
   )
 
 type ItemProp @entity(immutable: true) {
