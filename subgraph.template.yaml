@@ -16,7 +16,7 @@ dataSources:
       startBlock: {{LightGTCRFactory.startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - MetaEvidence
@@ -37,7 +37,7 @@ dataSources:
       startBlock: {{GTCRFactory.startBlock}}
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - MetaEvidence
@@ -57,7 +57,7 @@ templates:
       abi: LightGeneralizedTCR
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - LItem
@@ -103,7 +103,7 @@ templates:
       abi: IArbitrator
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - Arbitrator
@@ -125,7 +125,7 @@ templates:
       abi: GeneralizedTCR
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - Item
@@ -166,7 +166,7 @@ templates:
       abi: IArbitrator
     mapping:
       kind: ethereum/events
-      apiVersion: 0.0.5
+      apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - Item
@@ -186,3 +186,40 @@ templates:
         - event: AppealDecision(indexed uint256,indexed address)
           handler: handleAppealDecision
       file: ./src/GeneralizedTCRMapping.ts
+  - name: GTCREvidenceMetadata
+    kind: file/ipfs
+    mapping:
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/fileHandlers/EvidenceMetadataHandler.ts
+      handler: handleGTCREvidenceMetadata
+      entities:
+        - EvidenceMetadata
+      abis:
+        - name: GeneralizedTCR
+          file: ./abis/GeneralizedTCR.json
+  - name: LGTCREvidence
+    kind: file/ipfs
+    mapping:
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/fileHandlers/LEvidenceMetadataHandler.ts
+      handler: handleLGTCREvidenceMetadata
+      entities:
+        - EvidenceMetadata
+      abis:
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json
+  - name: LItemMetadata
+    kind: file/ipfs
+    mapping:
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      file: ./src/fileHandlers/LItemMetadataHandler.ts
+      handler: handleLItemMetadata
+      entities:
+        - LItemMetadata
+        - ItemProp
+      abis:
+        - name: LightGeneralizedTCR
+          file: ./abis/LightGeneralizedTCR.json

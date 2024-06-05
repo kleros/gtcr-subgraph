@@ -1,12 +1,5 @@
 /* eslint-disable prefer-const */
-import {
-  Bytes,
-  BigInt,
-  Address,
-  ipfs,
-  json,
-  log,
-} from '@graphprotocol/graph-ts';
+import { Bytes, BigInt, Address, log } from '@graphprotocol/graph-ts';
 import {
   Item,
   Request,
@@ -36,6 +29,8 @@ import {
   Ruling,
   ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/GeneralizedTCR/GeneralizedTCR';
+import { GTCREvidenceMetadata as EvidenceMetadataTemplate } from '../generated/templates';
+import { extractPath } from './utils';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -616,80 +611,9 @@ export function handleEvidence(event: EvidenceEvent): void {
     BigInt.fromI32(1),
   );
 
-  // Try to parse and store evidence fields.
-  let jsonStr = ipfs.cat(event.params._evidence);
-  if (!jsonStr) {
-    log.warning('Failed to fetch evidence {}', [event.params._evidence]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let jsonObjValueAndSuccess = json.try_fromBytes(jsonStr as Bytes);
-  if (!jsonObjValueAndSuccess.isOk) {
-    log.warning(`Error getting json object value for evidence {}`, [
-      event.params._evidence,
-    ]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let jsonObj = jsonObjValueAndSuccess.value.toObject();
-  if (!jsonObj) {
-    log.warning(`Error converting object for evidence {}`, [
-      event.params._evidence,
-    ]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let nameValue = jsonObj.get('name');
-  if (!nameValue) {
-    log.warning(`Error getting name value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.name = nameValue.toString();
-  }
-
-  // Somehow Curate uses "title"?? so fetch in case
-  let titleValue = jsonObj.get('title');
-  if (!titleValue) {
-    log.warning(`Error getting title value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.title = titleValue.toString();
-  }
-
-  let descriptionValue = jsonObj.get('description');
-  if (!descriptionValue) {
-    log.warning(`Error getting description value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.description = descriptionValue.toString();
-  }
-
-  let fileURIValue = jsonObj.get('fileURI');
-  if (!fileURIValue) {
-    log.warning(`Error getting fileURI value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.fileURI = fileURIValue.toString();
-  }
-
-  let fileTypeExtensionValue = jsonObj.get('fileTypeExtension');
-  if (!fileTypeExtensionValue) {
-    log.warning(`Error getting fileTypeExtension value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.fileTypeExtension = fileTypeExtensionValue.toString();
-  }
+  const ipfsHash = extractPath(event.params._evidence);
+  evidence.metadata = ipfsHash;
+  EvidenceMetadataTemplate.create(ipfsHash);
 
   evidenceGroup.save();
   evidence.save();

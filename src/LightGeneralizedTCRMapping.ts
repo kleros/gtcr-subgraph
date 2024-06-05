@@ -1,17 +1,12 @@
 /* eslint-disable prefer-const */
 import {
-  Bytes,
   BigInt,
   Address,
-  ipfs,
-  json,
-  JSONValue,
-  JSONValueKind,
   log,
+  DataSourceContext,
 } from '@graphprotocol/graph-ts';
 import {
   LItem,
-  ItemProp,
   LRequest,
   LRound,
   LRegistry,
@@ -26,7 +21,11 @@ import {
   AppealDecision,
   IArbitrator,
 } from '../generated/templates/LIArbitrator/IArbitrator';
-import { LIArbitrator as IArbitratorDataSourceTemplate } from '../generated/templates';
+import {
+  LIArbitrator as IArbitratorDataSourceTemplate,
+  LGTCREvidence as EvidenceMetadataTemplate,
+  LItemMetadata as LItemMetadataTemplate,
+} from '../generated/templates';
 import {
   Contribution,
   Dispute,
@@ -40,6 +39,7 @@ import {
   Ruling,
   ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
+import { ZERO_ADDRESS, extractPath } from './utils';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -180,21 +180,17 @@ function updateCounters(
       BigInt.fromI32(1),
     );
   } else if (previousStatus == REGISTRATION_REQUESTED_CODE) {
-    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.minus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfRegistrationRequested =
+      registry.numberOfRegistrationRequested.minus(BigInt.fromI32(1));
   } else if (previousStatus == CLEARING_REQUESTED_CODE) {
-    registry.numberOfClearingRequested = registry.numberOfClearingRequested.minus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfClearingRequested =
+      registry.numberOfClearingRequested.minus(BigInt.fromI32(1));
   } else if (previousStatus == CHALLENGED_REGISTRATION_REQUEST_CODE) {
-    registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.minus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfChallengedRegistrations =
+      registry.numberOfChallengedRegistrations.minus(BigInt.fromI32(1));
   } else if (previousStatus == CHALLENGED_CLEARING_REQUEST_CODE) {
-    registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.minus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfChallengedClearing =
+      registry.numberOfChallengedClearing.minus(BigInt.fromI32(1));
   }
 
   if (newStatus == ABSENT_CODE) {
@@ -204,76 +200,20 @@ function updateCounters(
       BigInt.fromI32(1),
     );
   } else if (newStatus == REGISTRATION_REQUESTED_CODE) {
-    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.plus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfRegistrationRequested =
+      registry.numberOfRegistrationRequested.plus(BigInt.fromI32(1));
   } else if (newStatus == CLEARING_REQUESTED_CODE) {
-    registry.numberOfClearingRequested = registry.numberOfClearingRequested.plus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfClearingRequested =
+      registry.numberOfClearingRequested.plus(BigInt.fromI32(1));
   } else if (newStatus == CHALLENGED_REGISTRATION_REQUEST_CODE) {
-    registry.numberOfChallengedRegistrations = registry.numberOfChallengedRegistrations.plus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfChallengedRegistrations =
+      registry.numberOfChallengedRegistrations.plus(BigInt.fromI32(1));
   } else if (newStatus == CHALLENGED_CLEARING_REQUEST_CODE) {
-    registry.numberOfChallengedClearing = registry.numberOfChallengedClearing.plus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfChallengedClearing =
+      registry.numberOfChallengedClearing.plus(BigInt.fromI32(1));
   }
 
   registry.save();
-}
-
-let ZERO_ADDRESS = Bytes.fromHexString(
-  '0x0000000000000000000000000000000000000000',
-) as Bytes;
-
-function JSONValueToMaybeString(
-  value: JSONValue | null,
-  _default: string = '-',
-): string {
-  // Subgraph considers an empty string to be null and
-  // the handler crashes when attempting to save the entity.
-  // This is a security vulnerability because an adversary
-  // could manually craft an item with missing columns
-  // and the item would not show up in the UI, passing
-  // the challenge period unoticed.
-  //
-  // We fix this by setting the field manually to a hifen.
-  if (value == null || value.isNull()) {
-    return '-';
-  }
-
-  switch (value.kind) {
-    case JSONValueKind.BOOL:
-      return value.toBool() == true ? 'true' : 'false';
-    case JSONValueKind.STRING:
-      return value.toString();
-    case JSONValueKind.NUMBER:
-      return value.toBigInt().toHexString();
-    default:
-      return _default;
-  }
-}
-
-function JSONValueToBool(
-  value: JSONValue | null,
-  _default: boolean = false,
-): boolean {
-  if (value == null || value.isNull()) {
-    return _default;
-  }
-
-  switch (value.kind) {
-    case JSONValueKind.BOOL:
-      return value.toBool();
-    case JSONValueKind.STRING:
-      return value.toString() == 'true';
-    case JSONValueKind.NUMBER:
-      return value.toBigInt().notEqual(BigInt.fromString('0'));
-    default:
-      return _default;
-  }
 }
 
 export function handleNewItem(event: NewItem): void {
@@ -309,98 +249,14 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
-  item.keywords = event.address.toHexString();
+  const ipfsHash = extractPath(event.params._data);
+  item.metadata = ipfsHash;
 
-  // Offchain item data could be unavailable. We cannot let
-  // this handler fail otherwise an item would pass the challenge
-  // period unnoticed. Instead we set dummy data so challengers
-  // have a chance to check this.
-  let jsonStr = ipfs.cat(item.data);
-  if (!jsonStr) {
-    log.error('Failed to fetch item #{} JSON: {}', [graphItemID, item.data]);
-    item.save();
-    registry.save();
-    return;
-  }
+  const context = new DataSourceContext();
+  context.setString('graphItemID', graphItemID);
+  context.setString('address', event.address.toHexString());
 
-  let jsonObjValueAndSuccess = json.try_fromBytes(jsonStr as Bytes);
-  if (!jsonObjValueAndSuccess.isOk) {
-    log.error(`Error getting json object value for graphItemID {}`, [
-      graphItemID,
-    ]);
-    item.save();
-    registry.save();
-    return;
-  }
-
-  let jsonObj = jsonObjValueAndSuccess.value.toObject();
-  if (!jsonObj) {
-    log.error(`Error converting object for graphItemID {}`, [graphItemID]);
-    item.save();
-    registry.save();
-    return;
-  }
-
-  let columnsValue = jsonObj.get('columns');
-  if (!columnsValue) {
-    log.error(`Error getting column values for graphItemID {}`, [graphItemID]);
-    item.save();
-    registry.save();
-    return;
-  }
-  let columns = columnsValue.toArray();
-
-  let valuesValue = jsonObj.get('values');
-  if (!valuesValue) {
-    log.error(`Error getting valuesValue for graphItemID {}`, [graphItemID]);
-    item.save();
-    registry.save();
-    return;
-  }
-  let values = valuesValue.toObject();
-
-  let identifier = 0;
-  for (let i = 0; i < columns.length; i++) {
-    let col = columns[i];
-    let colObj = col.toObject();
-
-    let label = colObj.get('label');
-
-    // We must account for items with missing fields.
-    let checkedLabel = label
-      ? label.toString()
-      : 'missing-label'.concat(i.toString());
-
-    let description = colObj.get('description');
-    let _type = colObj.get('type');
-    let isIdentifier = colObj.get('isIdentifier');
-    let value = values.get(checkedLabel);
-    let itemPropId = graphItemID + '@' + checkedLabel;
-    let itemProp = new ItemProp(itemPropId);
-
-    itemProp.value = JSONValueToMaybeString(value);
-    itemProp.type = JSONValueToMaybeString(_type);
-    itemProp.label = JSONValueToMaybeString(label);
-    itemProp.description = JSONValueToMaybeString(description);
-    itemProp.isIdentifier = JSONValueToBool(isIdentifier);
-    itemProp.item = item.id;
-
-    if (itemProp.isIdentifier) {
-      if (identifier == 0) item.key0 = itemProp.value;
-      else if (identifier == 1) item.key1 = itemProp.value;
-      else if (identifier == 2) item.key2 = itemProp.value;
-      else if (identifier == 3) item.key3 = itemProp.value;
-      else if (identifier == 4) item.key4 = itemProp.value;
-      identifier += 1;
-    }
-
-    if (itemProp.isIdentifier && itemProp.value != null && item.keywords) {
-      item.keywords =
-        (item.keywords as string) + ' | ' + (itemProp.value as string);
-    }
-
-    itemProp.save();
-  }
+  LItemMetadataTemplate.createWithContext(ipfsHash, context);
 
   item.save();
   registry.save();
@@ -493,9 +349,8 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   if (itemInfo.value1.equals(BigInt.fromI32(1))) {
     // This is the first request for this item, which must be
     // a registration request.
-    registry.numberOfRegistrationRequested = registry.numberOfRegistrationRequested.plus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfRegistrationRequested =
+      registry.numberOfRegistrationRequested.plus(BigInt.fromI32(1));
   } else {
     updateCounters(previousStatus, newStatus, event.address);
   }
@@ -992,80 +847,9 @@ export function handleEvidence(event: EvidenceEvent): void {
     BigInt.fromI32(1),
   );
 
-  // Try to parse and store evidence fields.
-  let jsonStr = ipfs.cat(event.params._evidence);
-  if (!jsonStr) {
-    log.warning('Failed to fetch evidence {}', [event.params._evidence]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let jsonObjValueAndSuccess = json.try_fromBytes(jsonStr as Bytes);
-  if (!jsonObjValueAndSuccess.isOk) {
-    log.warning(`Error getting json object value for evidence {}`, [
-      event.params._evidence,
-    ]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let jsonObj = jsonObjValueAndSuccess.value.toObject();
-  if (!jsonObj) {
-    log.warning(`Error converting object for evidence {}`, [
-      event.params._evidence,
-    ]);
-    evidenceGroup.save();
-    evidence.save();
-    return;
-  }
-
-  let nameValue = jsonObj.get('name');
-  if (!nameValue) {
-    log.warning(`Error getting name value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.name = nameValue.toString();
-  }
-
-  // Somehow Curate uses "title"?? so fetch in case
-  let titleValue = jsonObj.get('title');
-  if (!titleValue) {
-    log.error(`Error getting title value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.title = titleValue.toString();
-  }
-
-  let descriptionValue = jsonObj.get('description');
-  if (!descriptionValue) {
-    log.warning(`Error getting description value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.description = descriptionValue.toString();
-  }
-
-  let fileURIValue = jsonObj.get('fileURI');
-  if (!fileURIValue) {
-    log.warning(`Error getting fileURI value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.fileURI = fileURIValue.toString();
-  }
-
-  let fileTypeExtensionValue = jsonObj.get('fileTypeExtension');
-  if (!fileTypeExtensionValue) {
-    log.warning(`Error getting fileTypeExtension value for evidence {}`, [
-      event.params._evidence,
-    ]);
-  } else {
-    evidence.fileTypeExtension = fileTypeExtensionValue.toString();
-  }
+  const ipfsHash = extractPath(event.params._evidence);
+  evidence.metadata = ipfsHash;
+  EvidenceMetadataTemplate.create(ipfsHash);
 
   evidenceGroup.save();
   evidence.save();
