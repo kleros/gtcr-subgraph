@@ -57,7 +57,7 @@ type Evidence @entity {
   metadata: EvidenceMetadata
 }
 
-type EvidenceMetadata @entity {
+type EvidenceMetadata @entity(immutable: true) {
   id: ID!
   "Name of the evidence"
   name: String
@@ -116,7 +116,23 @@ type LRegistry @entity {
   numberOfChallengedClearing: BigInt!
   "Connected TCR. Can be the 0 address. In practice, will never be null."
   connectedTCR: Bytes
+  metadata: LRegistryMetadata
 }
+
+type LRegistryMetadata @entity {
+ id: ID!
+ title: String
+ description: String
+ itemName: String
+ itemNamePlural: String
+ isConnectedTCR: Boolean
+ requireRemovalEvidence: Boolean
+ isTCRofTcrs: Boolean
+ parentTCRAddress: String
+ relTcrDisabled: Boolean
+ registry: LRegistry @derivedFrom(field: "metadata")
+}
+
 
 type MetaEvidence @entity {
   "The meta evidence ID."
@@ -155,8 +171,8 @@ type LItem @entity {
   metadata: LItemMetadata
 }
 
-type LItemMetadata @entity {
-  "ipfs cid"
+type LItemMetadata @entity(immutable: true) {
+  "ipfs cid - Litem ID"
   id: ID!
   "The parsed data describing the item."
   props: [ItemProp!]! @derivedFrom(field: "item")
@@ -183,8 +199,14 @@ type _Schema_
     algorithm: rank
     include: [{ entity: "LItemMetadata", fields: [{ name: "keywords" }] }]
   )
+  @fulltext(
+    name: "registrySearch"
+    language: en
+    algorithm: rank
+    include: [{ entity: "LRegistryMetadata", fields: [{ name: "title" }, { name: "description" }, { name: "itemName" }] }]
+  )
 
-type ItemProp @entity {
+type ItemProp @entity(immutable: true) {
   id: ID!
   type: String!
   label: String!
