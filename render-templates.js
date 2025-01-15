@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const mustache = require('mustache');
 
 const chainNameToChainId = {
-  xdai: 100,
+  gnosis: 100,
   mainnet: 1,
   goerli: 5,
   sepolia: 11155111,

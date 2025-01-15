@@ -12,7 +12,7 @@ This repo defines a subgraph which is used by Curate.
 
 ## Deployment to a personal account
 
-To deploy to your own instance on a testnet, modify the script to use your own subgraph instance. For example, change `deploy:xdai` to `graph deploy --product hosted-service <your-username>/curate-xdai`.
+To deploy to your own instance on a testnet, modify the script to use your own subgraph instance. For example, change `deploy:gnosis` to `graph deploy --product hosted-service <your-username>/curate-gnosis`.
 
 To set your access token:
 `npx graph auth --product hosted-service <access-token>`
