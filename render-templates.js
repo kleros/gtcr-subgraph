@@ -3,6 +3,7 @@ const mustache = require('mustache');
 
 const chainNameToChainId = {
   gnosis: 100,
+  xdai: 100, // For Goldsky: https://docs.goldsky.com/chains/supported-networks
   mainnet: 1,
   goerli: 5,
   sepolia: 11155111,
@@ -12,14 +13,10 @@ async function main() {
   const networkName = process.argv[2];
   const chainId = chainNameToChainId[networkName];
   const deployments = JSON.parse(fs.readFileSync('networks.json', 'utf8'));
-  const {
-    address: lgtcrFactoryAddr,
-    startBlock: lgtcrFactoryStartBlock,
-  } = deployments['LightGTCRFactory'][chainId];
-  const {
-    address: gtcrFactoryAddr,
-    startBlock: gtcrFactoryStartBlock,
-  } = deployments['GTCRFactory'][chainId];
+  const { address: lgtcrFactoryAddr, startBlock: lgtcrFactoryStartBlock } =
+    deployments['LightGTCRFactory'][chainId];
+  const { address: gtcrFactoryAddr, startBlock: gtcrFactoryStartBlock } =
+    deployments['GTCRFactory'][chainId];
   const templateData = {
     network: networkName,
   };

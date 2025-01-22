@@ -25,6 +25,7 @@ import {
   LIArbitrator as IArbitratorDataSourceTemplate,
   LGTCREvidence as EvidenceMetadataTemplate,
   LItemMetadata as LItemMetadataTemplate,
+  LRegistryMetadata as LRegistryMetadataTemplate,
 } from '../generated/templates';
 import {
   Contribution,
@@ -250,7 +251,9 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
   const ipfsHash = extractPath(event.params._data);
-  item.metadata = ipfsHash;
+  item.metadata = `${ipfsHash}-${graphItemID}`;
+
+  log.debug('Creating datasource for ipfs hash : {}', [ipfsHash]);
 
   const context = new DataSourceContext();
   context.setString('graphItemID', graphItemID);
@@ -298,6 +301,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
   let requestID = graphItemID + '-' + requestIndex.toString();
 
   let request = new LRequest(requestID);
@@ -305,7 +309,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
-  request.requester = event.transaction.from;
+  request.requester = requestInfo.value4[1];
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -446,6 +450,7 @@ export function handleRequestChallenged(event: Dispute): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
+  let requestInfo = tcr.getRequestInfo(itemID, requestIndex);
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
@@ -454,7 +459,7 @@ export function handleRequestChallenged(event: Dispute): void {
   }
 
   request.disputed = true;
-  request.challenger = event.transaction.from;
+  request.challenger = requestInfo.value4[2];
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
@@ -790,6 +795,18 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   }
 
   metaEvidence.URI = event.params._evidence;
+
+  const ipfsHash = extractPath(event.params._evidence);
+  registry.metadata = `${ipfsHash}-${event.address.toHexString()}-${
+    registry.metaEvidenceCount
+  }`;
+
+  const context = new DataSourceContext();
+  context.setString('address', event.address.toHexString());
+  context.setBigInt('count', registry.metaEvidenceCount);
+
+  LRegistryMetadataTemplate.createWithContext(ipfsHash, context);
+
   metaEvidence.save();
 
   if (
@@ -848,8 +865,11 @@ export function handleEvidence(event: EvidenceEvent): void {
   );
 
   const ipfsHash = extractPath(event.params._evidence);
-  evidence.metadata = ipfsHash;
-  EvidenceMetadataTemplate.create(ipfsHash);
+  evidence.metadata = `${ipfsHash}-${evidence.id}`;
+
+  const context = new DataSourceContext();
+  context.setString('evidenceId', evidence.id);
+  EvidenceMetadataTemplate.createWithContext(ipfsHash, context);
 
   evidenceGroup.save();
   evidence.save();
