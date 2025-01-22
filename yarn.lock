@@ -597,10 +597,10 @@
     walk "^2.3.14"
     web3 "^1.0.0-beta.35"
 
-"@goldskycom/cli@^11.2.0":
-  version "11.2.0"
-  resolved "https://registry.yarnpkg.com/@goldskycom/cli/-/cli-11.2.0.tgz#27094148a9510164206f2a4c6d4565b542ac8aae"
-  integrity sha512-p8HKTmE9UDev/p35/ssB+deM31eHmfvG3iT3RWNLYrK8oddg7DaA4CQRdYrjfeLs4rZfRPEWVG39geGHF40H/g==
+"@goldskycom/cli@^11.3.0":
+  version "11.3.0"
+  resolved "https://registry.yarnpkg.com/@goldskycom/cli/-/cli-11.3.0.tgz#17faad1d84bcc7a3a133e9df95e6710a65e2179a"
+  integrity sha512-VrEM8hPZkyCe+BODT4bTj7pWUoIpcnQrHfz5YFkEd7aSyllD/BRpc6kSoYGqibBt5Hmcj0npabc3vT6BFq1Tew==
   dependencies:
     cuid "^2.1.8"
     parse-duration "^1.0.3"
