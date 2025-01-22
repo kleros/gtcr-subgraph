@@ -6,12 +6,12 @@ on:
       network:
         description: The network to deploy the subgraph to
         required: true
-        default: 'xdai'
+        default: 'gnosis'
         type: choice
         options:
           - goerli
           - sepolia
-          - xdai
+          - gnosis
           - mainnet
       environment:
         description: The environment to deploy to
