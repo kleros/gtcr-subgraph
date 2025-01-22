@@ -18,7 +18,7 @@ export function handleLRegistryMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
-  if (!value) {
+  if (!value || parsedResult.isError) {
     log.warning(`Error converting object for hash {}`, [ipfsHash]);
     metadata.save();
     return;

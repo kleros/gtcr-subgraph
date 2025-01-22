@@ -20,7 +20,7 @@ export function handleLItemMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
-  if (!value) {
+  if (!value || parsedResult.isError) {
     log.warning(`Error converting object for graphItemId {}`, [graphItemID]);
     metadata.save();
     return;

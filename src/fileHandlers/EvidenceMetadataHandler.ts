@@ -13,7 +13,7 @@ export function handleGTCREvidenceMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [id, content.toString()]);
 
-  if (!value) {
+  if (!value || parsedResult.isError) {
     log.warning(`Error converting object for evidence {}`, [id]);
     evidence.save();
     return;
