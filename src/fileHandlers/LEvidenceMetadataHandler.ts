@@ -7,7 +7,8 @@ export function handleLGTCREvidenceMetadata(content: Bytes): void {
   const evidenceId = context.getString('evidenceId');
 
   const evidence = new EvidenceMetadata(`${id}-${evidenceId}`);
-  const value = json.fromBytes(content).toObject();
+  const parsedResult = json.try_fromBytes(content);
+  const value = parsedResult.value.toObject();
 
   log.debug(`ipfs hash : {}, content : {}`, [id, content.toString()]);
 

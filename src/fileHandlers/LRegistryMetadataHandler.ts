@@ -5,7 +5,8 @@ import { JSONValueToBool, JSONValueToMaybeString } from '../utils';
 export function handleLRegistryMetadata(content: Bytes): void {
   const ipfsHash = dataSource.stringParam();
 
-  const value = json.fromBytes(content).toObject();
+  const parsedResult = json.try_fromBytes(content);
+  const value = parsedResult.value.toObject();
 
   const context = dataSource.context();
   const count = context.getBigInt('count');
@@ -25,7 +26,7 @@ export function handleLRegistryMetadata(content: Bytes): void {
 
   const metadataValue = value.get('metadata');
   if (!metadataValue) {
-    log.error(`Error getting metadata values from ipfs hash {}`, [ipfsHash]);
+    log.warning(`Error getting metadata values from ipfs hash {}`, [ipfsHash]);
     metadata.save();
     return;
   }
