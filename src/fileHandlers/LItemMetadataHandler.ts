@@ -6,7 +6,6 @@ export function handleLItemMetadata(content: Bytes): void {
   const ipfsHash = dataSource.stringParam();
 
   const parsedResult = json.try_fromBytes(content);
-  const value = parsedResult.value.toObject();
 
   const context = dataSource.context();
   const graphItemID = context.getString('graphItemID');
@@ -20,11 +19,12 @@ export function handleLItemMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
-  if (!value || parsedResult.isError) {
+  if (!parsedResult.isOk || parsedResult.isError) {
     log.warning(`Error converting object for graphItemId {}`, [graphItemID]);
     metadata.save();
     return;
   }
+  const value = parsedResult.value.toObject();
 
   const columnsValue = value.get('columns');
   if (!columnsValue) {

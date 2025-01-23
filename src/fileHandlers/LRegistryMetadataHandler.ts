@@ -6,7 +6,6 @@ export function handleLRegistryMetadata(content: Bytes): void {
   const ipfsHash = dataSource.stringParam();
 
   const parsedResult = json.try_fromBytes(content);
-  const value = parsedResult.value.toObject();
 
   const context = dataSource.context();
   const count = context.getBigInt('count');
@@ -18,11 +17,13 @@ export function handleLRegistryMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
-  if (!value || parsedResult.isError) {
+  if (!parsedResult.isOk || parsedResult.isError) {
     log.warning(`Error converting object for hash {}`, [ipfsHash]);
     metadata.save();
     return;
   }
+
+  const value = parsedResult.value.toObject();
 
   const metadataValue = value.get('metadata');
   if (!metadataValue) {
