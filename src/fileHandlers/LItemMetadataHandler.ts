@@ -5,7 +5,7 @@ import { JSONValueToBool, JSONValueToMaybeString } from '../utils';
 export function handleLItemMetadata(content: Bytes): void {
   const ipfsHash = dataSource.stringParam();
 
-  const value = json.fromBytes(content).toObject();
+  const parsedResult = json.try_fromBytes(content);
 
   const context = dataSource.context();
   const graphItemID = context.getString('graphItemID');
@@ -19,15 +19,18 @@ export function handleLItemMetadata(content: Bytes): void {
 
   log.debug(`ipfs hash : {}, content : {}`, [ipfsHash, content.toString()]);
 
-  if (!value) {
+  if (!parsedResult.isOk || parsedResult.isError) {
     log.warning(`Error converting object for graphItemId {}`, [graphItemID]);
     metadata.save();
     return;
   }
+  const value = parsedResult.value.toObject();
 
   const columnsValue = value.get('columns');
   if (!columnsValue) {
-    log.error(`Error getting column values for graphItemID {}`, [graphItemID]);
+    log.warning(`Error getting column values for graphItemID {}`, [
+      graphItemID,
+    ]);
     metadata.save();
     return;
   }
@@ -35,7 +38,7 @@ export function handleLItemMetadata(content: Bytes): void {
 
   const valuesValue = value.get('values');
   if (!valuesValue) {
-    log.error(`Error getting valuesValue for graphItemID {}`, [graphItemID]);
+    log.warning(`Error getting valuesValue for graphItemID {}`, [graphItemID]);
     metadata.save();
     return;
   }

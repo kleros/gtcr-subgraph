@@ -8,15 +8,16 @@ export function handleGTCREvidenceMetadata(content: Bytes): void {
   const evidenceId = context.getString('evidenceId');
 
   const evidence = new EvidenceMetadata(`${id}-${evidenceId}`);
-  const value = json.fromBytes(content).toObject();
+  const parsedResult = json.try_fromBytes(content);
 
   log.debug(`ipfs hash : {}, content : {}`, [id, content.toString()]);
 
-  if (!value) {
+  if (!parsedResult.isOk || parsedResult.isError) {
     log.warning(`Error converting object for evidence {}`, [id]);
     evidence.save();
     return;
   }
+  const value = parsedResult.value.toObject();
 
   const nameValue = value.get('name');
   if (!nameValue) {
