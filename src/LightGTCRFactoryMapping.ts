@@ -1,8 +1,8 @@
 /* eslint-disable prefer-const */
-import { BigInt } from '@graphprotocol/graph-ts';
 import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
 import { MetaEvidence, LRegistry } from '../generated/schema';
 import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
+import { ZERO } from './utils';
 
 export function handleNewGTCR(event: NewGTCR): void {
   LightGeneralizedTCRDataSource.create(event.params._address);
@@ -17,14 +17,14 @@ export function handleNewGTCR(event: NewGTCR): void {
   clearingMetaEvidence.URI = '';
   clearingMetaEvidence.save();
 
-  registry.metaEvidenceCount = BigInt.fromI32(0);
+  registry.metaEvidenceCount = ZERO;
   registry.registrationMetaEvidence = registrationMetaEvidence.id;
   registry.clearingMetaEvidence = clearingMetaEvidence.id;
-  registry.numberOfAbsent = BigInt.fromI32(0);
-  registry.numberOfRegistered = BigInt.fromI32(0);
-  registry.numberOfRegistrationRequested = BigInt.fromI32(0);
-  registry.numberOfClearingRequested = BigInt.fromI32(0);
-  registry.numberOfChallengedRegistrations = BigInt.fromI32(0);
-  registry.numberOfChallengedClearing = BigInt.fromI32(0);
+  registry.numberOfAbsent = ZERO;
+  registry.numberOfRegistered = ZERO;
+  registry.numberOfRegistrationRequested = ZERO;
+  registry.numberOfClearingRequested = ZERO;
+  registry.numberOfChallengedRegistrations = ZERO;
+  registry.numberOfChallengedClearing = ZERO;
   registry.save();
 }
