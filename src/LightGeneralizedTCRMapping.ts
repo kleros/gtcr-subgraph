@@ -253,7 +253,10 @@ export function handleNewItem(event: NewItem): void {
   const ipfsHash = extractPath(event.params._data);
   item.metadata = `${ipfsHash}-${graphItemID}`;
 
-  log.debug('Creating datasource for ipfs hash : {}', [ipfsHash]);
+  log.debug('Creating datasource for ipfs hash : {}, graphItemID: {}', [
+    ipfsHash,
+    graphItemID,
+  ]);
 
   const context = new DataSourceContext();
   context.setString('graphItemID', graphItemID);
