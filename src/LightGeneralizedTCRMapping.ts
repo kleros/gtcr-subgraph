@@ -15,6 +15,7 @@ import {
   EvidenceGroup,
   Evidence,
   LArbitrator,
+  Submitter
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -103,6 +104,26 @@ CONTRACT_STATUS_NAMES.set(ABSENT_CODE, 'Absent');
 CONTRACT_STATUS_NAMES.set(REGISTERED_CODE, 'Registered');
 CONTRACT_STATUS_NAMES.set(REGISTRATION_REQUESTED_CODE, 'RegistrationRequested');
 CONTRACT_STATUS_NAMES.set(CLEARING_REQUESTED_CODE, 'ClearingRequested');
+
+function loadOrCreateSubmitter(addr: Address): Submitter {
+  let id = addr.toHexString().toLowerCase();
+  let s = Submitter.load(id);
+  if (s == null) {
+    s = new Submitter(id);
+    s.totalSubmissions = BigInt.fromI32(0);
+    s.ongoingSubmissions = BigInt.fromI32(0);
+    s.pastSubmissions = BigInt.fromI32(0);
+    s.save();
+  }
+  return s as Submitter;
+}
+
+function moveRequestToPast(requester: Address): void {
+  let s = loadOrCreateSubmitter(requester);
+  s.ongoingSubmissions = s.ongoingSubmissions.minus(BigInt.fromI32(1));
+  s.pastSubmissions = s.pastSubmissions.plus(BigInt.fromI32(1));
+  s.save();
+}
 
 function getExtendedStatus(disputed: boolean, status: string): number {
   if (disputed) {
@@ -358,6 +379,11 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   } else {
     updateCounters(previousStatus, newStatus, event.address);
   }
+
+  let submitter = loadOrCreateSubmitter(request.requester as Address);
+  submitter.totalSubmissions = submitter.totalSubmissions.plus(BigInt.fromI32(1));
+  submitter.ongoingSubmissions = submitter.ongoingSubmissions.plus(BigInt.fromI32(1));
+  submitter.save();
 
   round.save();
   request.save();
@@ -652,6 +678,11 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   request.resolutionTx = event.transaction.hash;
   // requestInfo.value6 is request.ruling.
   request.disputeOutcome = getFinalRuling(requestInfo.value6);
+
+  if (item.status == REGISTERED || item.status == ABSENT) {
+    // request just moved to a “finished” final state
+    moveRequestToPast(request.requester as Address);
+  }
 
   // Iterate over every contribution and mark it as withdrawable if it is.
   // Start from the second round as the first is automatically withdrawn
