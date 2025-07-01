@@ -380,7 +380,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     updateCounters(previousStatus, newStatus, event.address);
   }
 
-  let submitter = loadOrCreateSubmitter(request.requester as Address);
+  let submitter = loadOrCreateSubmitter(Address.fromBytes(request.requester));
   submitter.totalSubmissions = submitter.totalSubmissions.plus(BigInt.fromI32(1));
   submitter.ongoingSubmissions = submitter.ongoingSubmissions.plus(BigInt.fromI32(1));
   submitter.save();
@@ -681,7 +681,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
 
   if (item.status == REGISTERED || item.status == ABSENT) {
     // request just moved to a “finished” final state
-    moveRequestToPast(request.requester as Address);
+    moveRequestToPast(Address.fromBytes(request.requester));
   }
 
   // Iterate over every contribution and mark it as withdrawable if it is.
