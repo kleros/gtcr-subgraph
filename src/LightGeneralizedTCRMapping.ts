@@ -333,7 +333,15 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = safeDecrement(item.numberOfRequests);
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
+  let requestInfoResult = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      event.params._itemID.toHexString(),
+      requestIndex.toString()
+    ]);
+    return;
+  }
+  let requestInfo = requestInfoResult.value;
   let requestID = graphItemID + '-' + requestIndex.toString();
 
   let request = new LRequest(requestID);
@@ -487,7 +495,15 @@ export function handleRequestChallenged(event: Dispute): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = safeDecrement(item.numberOfRequests);
-  let requestInfo = tcr.getRequestInfo(itemID, requestIndex);
+  let requestInfoResult = tcr.try_getRequestInfo(itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      itemID.toHexString(),
+      requestIndex.toString()
+    ]);
+    return;
+  }
+  let requestInfo = requestInfoResult.value;
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
@@ -671,7 +687,15 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   item.latestRequestResolutionTime = event.block.timestamp;
 
   let requestIndex = safeDecrement(item.numberOfRequests);
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
+  let requestInfoResult = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      event.params._itemID.toHexString(),
+      requestIndex.toString()
+    ]);
+    return;
+  }
+  let requestInfo = requestInfoResult.value;
 
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
