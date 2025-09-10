@@ -40,7 +40,7 @@ import {
   Ruling,
   ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
-import { ZERO_ADDRESS, extractPath } from './utils';
+import { ZERO, ZERO_ADDRESS, extractPath } from './utils';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -657,6 +657,15 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   }
 
   item.latestRequestResolutionTime = event.block.timestamp;
+
+  if(item.numberOfRequests.equals(ZERO)){
+     log.error(
+       `Encountered 0 as numberOfRequest for Item : {}`,
+       [graphItemID],
+     );
+     item.save();
+     return;
+  }
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
   let requestInfo = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
