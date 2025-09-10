@@ -304,7 +304,16 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
+  let requestInfo = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfo.reverted) {
+    log.error(
+      `getRequestInfo reverted for LItem : {}, requestIndex : {}`,
+      [graphItemID, requestIndex.toString()],
+    );
+    item.save();
+    return;
+  }
+
   let requestID = graphItemID + '-' + requestIndex.toString();
 
   let request = new LRequest(requestID);
@@ -312,7 +321,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
-  request.requester = requestInfo.value4[1];
+  request.requester = requestInfo.value.value4[1];
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -453,7 +462,16 @@ export function handleRequestChallenged(event: Dispute): void {
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.getRequestInfo(itemID, requestIndex);
+  let requestInfo = tcr.try_getRequestInfo(itemID, requestIndex);
+  if (requestInfo.reverted) {
+    log.error(
+      `Failed to fetch request info for LItem : {}, requestIndex : {}`,
+      [graphItemID, requestIndex.toString()],
+    );
+    item.save();
+    return;
+  }
+
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
@@ -462,7 +480,7 @@ export function handleRequestChallenged(event: Dispute): void {
   }
 
   request.disputed = true;
-  request.challenger = requestInfo.value4[2];
+  request.challenger = requestInfo.value.value4[2];
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
@@ -641,7 +659,15 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   item.latestRequestResolutionTime = event.block.timestamp;
 
   let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.getRequestInfo(event.params._itemID, requestIndex);
+  let requestInfo = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfo.reverted) {
+    log.error(
+      `Failed to fetch request info for LItem : {}, requestIndex : {}`,
+      [graphItemID, requestIndex.toString()],
+    );
+    item.save();
+    return;
+  }
 
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
@@ -654,7 +680,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   request.resolutionTime = event.block.timestamp;
   request.resolutionTx = event.transaction.hash;
   // requestInfo.value6 is request.ruling.
-  request.disputeOutcome = getFinalRuling(requestInfo.value6);
+  request.disputeOutcome = getFinalRuling(requestInfo.value.value6);
 
   // Iterate over every contribution and mark it as withdrawable if it is.
   // Start from the second round as the first is automatically withdrawn
@@ -685,11 +711,11 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         return;
       }
 
-      if (requestInfo.value6 == NO_RULING_CODE) {
+      if (requestInfo.value.value6 == NO_RULING_CODE) {
         // The final ruling is refuse to rule. There is no winner
         // or loser so every contribution is withdrawable.
         contribution.withdrawable = true;
-      } else if (requestInfo.value6 == REQUESTER_CODE) {
+      } else if (requestInfo.value.value6 == REQUESTER_CODE) {
         // The requester won so only contributions to the requester
         // are withdrawable.
         // The only exception is in the case the last round the loser
