@@ -23,7 +23,8 @@
     "lint:eslint": "eslint . --ext .ts,.tsx",
     "lint:prettier": "prettier --config .prettierrc 'src/**/*.ts' --check",
     "lint": "yarn lint:eslint && yarn lint:prettier && yarn lint:secrets",
-    "format": "prettier --config .prettierrc 'src/**/*.ts' --write && eslint . --ext .ts,.tsx --fix"
+    "format": "prettier --config .prettierrc 'src/**/*.ts' --write && eslint . --ext .ts,.tsx --fix",
+    "test": "graph test"
   },
   "repository": {
     "type": "git",
@@ -39,33 +40,22 @@
     "@graphprotocol/graph-ts": "^0.35.1"
   },
   "devDependencies": {
-    "@assemblyscript/loader": "^0.14.11",
-    "@assemblyscript/node": "github:AssemblyScript/node",
     "@gnosis.pm/truffle-nice-tools": "^1.3.1",
     "@goldskycom/cli": "^11.3.0",
     "@graphprotocol/graph-cli": "^0.71.0",
-    "@kleros/erc-792": "3.0.0",
-    "@kleros/gtcr-encoder": "^1.1.3",
-    "@kleros/tcr": "^2.0.0",
-    "@truffle/contract": "^4.2.22",
-    "@truffle/hdwallet-provider": "^1.1.0",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
-    "assemblyscript": "^0.14.11",
-    "delay": "^4.4.0",
     "dotenv-safe": "^8.2.0",
     "eslint": "^7.30.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "ethers": "^5.0.14",
     "fs-extra": "^9.0.1",
+    "matchstick-as": "^0.6.0",
     "mocha": "^8.1.3",
     "mocha-steps": "^1.3.0",
     "mustache": "^4.0.1",
     "replace-in-file": "^6.1.0",
-    "should": "^13.2.3",
-    "typescript": "^4.3.5",
-    "wait-on": "^5.2.0"
+    "typescript": "^4.3.5"
   },
   "resolutions": {
     "ejs": "^3.1.10"

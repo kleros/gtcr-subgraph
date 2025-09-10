@@ -115,3 +115,8 @@ generated/
 .env
 
 subgraph.yaml
+
+# tests
+.docker
+.latest.json
+.bin
