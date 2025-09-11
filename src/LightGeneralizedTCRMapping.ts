@@ -15,6 +15,7 @@ import {
   EvidenceGroup,
   Evidence,
   LArbitrator,
+  Submitter
 } from '../generated/schema';
 import {
   AppealPossible,
@@ -104,6 +105,38 @@ CONTRACT_STATUS_NAMES.set(REGISTERED_CODE, 'Registered');
 CONTRACT_STATUS_NAMES.set(REGISTRATION_REQUESTED_CODE, 'RegistrationRequested');
 CONTRACT_STATUS_NAMES.set(CLEARING_REQUESTED_CODE, 'ClearingRequested');
 
+/**
+ * Safely decrement a counter without going below zero.
+ * Used whenever a registry/item/request counter is reduced.
+ */
+function safeDecrement(value: BigInt): BigInt {
+  if (value.gt(BigInt.fromI32(0))) {
+    return value.minus(BigInt.fromI32(1));
+  }
+  return BigInt.fromI32(0);
+}
+
+function loadOrCreateSubmitter(addr: Address): Submitter {
+  let id = addr.toHexString().toLowerCase();
+  let s = Submitter.load(id);
+  if (s == null) {
+    s = new Submitter(id);
+    s.totalSubmissions = BigInt.fromI32(0);
+    s.ongoingSubmissions = BigInt.fromI32(0);
+    s.pastSubmissions = BigInt.fromI32(0);
+    s.save();
+  }
+  return s as Submitter;
+}
+
+function moveRequestToPast(requester: Address): void {
+  let s = loadOrCreateSubmitter(requester);
+
+  s.ongoingSubmissions = safeDecrement(s.ongoingSubmissions);
+  s.pastSubmissions = s.pastSubmissions.plus(BigInt.fromI32(1));
+  s.save();
+}
+
 function getExtendedStatus(disputed: boolean, status: string): number {
   if (disputed) {
     if (status == CONTRACT_STATUS_NAMES.get(REGISTRATION_REQUESTED_CODE))
@@ -175,23 +208,21 @@ function updateCounters(
   }
 
   if (previousStatus == ABSENT_CODE) {
-    registry.numberOfAbsent = registry.numberOfAbsent.minus(BigInt.fromI32(1));
+    registry.numberOfAbsent = safeDecrement(registry.numberOfAbsent);
   } else if (previousStatus == REGISTERED_CODE) {
-    registry.numberOfRegistered = registry.numberOfRegistered.minus(
-      BigInt.fromI32(1),
-    );
+    registry.numberOfRegistered = safeDecrement(registry.numberOfRegistered);
   } else if (previousStatus == REGISTRATION_REQUESTED_CODE) {
     registry.numberOfRegistrationRequested =
-      registry.numberOfRegistrationRequested.minus(BigInt.fromI32(1));
+      safeDecrement(registry.numberOfRegistrationRequested);
   } else if (previousStatus == CLEARING_REQUESTED_CODE) {
     registry.numberOfClearingRequested =
-      registry.numberOfClearingRequested.minus(BigInt.fromI32(1));
+      safeDecrement(registry.numberOfClearingRequested);
   } else if (previousStatus == CHALLENGED_REGISTRATION_REQUEST_CODE) {
     registry.numberOfChallengedRegistrations =
-      registry.numberOfChallengedRegistrations.minus(BigInt.fromI32(1));
+      safeDecrement(registry.numberOfChallengedRegistrations);
   } else if (previousStatus == CHALLENGED_CLEARING_REQUEST_CODE) {
     registry.numberOfChallengedClearing =
-      registry.numberOfChallengedClearing.minus(BigInt.fromI32(1));
+      safeDecrement(registry.numberOfChallengedClearing);
   }
 
   if (newStatus == ABSENT_CODE) {
@@ -287,6 +318,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
     ]);
     return;
   }
+
   // `previousStatus` and `newStatus` are used for accounting.
   // Note that if this is the very first request of an item,
   // item.status and item.dispute are dirty because they were set by
@@ -303,17 +335,16 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
 
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
-  if (requestInfo.reverted) {
-    log.error(
-      `getRequestInfo reverted for LItem : {}, requestIndex : {}`,
-      [graphItemID, requestIndex.toString()],
-    );
-    item.save();
+  let requestIndex = safeDecrement(item.numberOfRequests);
+  let requestInfoResult = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      event.params._itemID.toHexString(),
+      requestIndex.toString()
+    ]);
     return;
   }
-
+  let requestInfo = requestInfoResult.value;
   let requestID = graphItemID + '-' + requestIndex.toString();
 
   let request = new LRequest(requestID);
@@ -370,6 +401,11 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   } else {
     updateCounters(previousStatus, newStatus, event.address);
   }
+
+  let submitter = loadOrCreateSubmitter(Address.fromBytes(request.requester));
+  submitter.totalSubmissions = submitter.totalSubmissions.plus(BigInt.fromI32(1));
+  submitter.ongoingSubmissions = submitter.ongoingSubmissions.plus(BigInt.fromI32(1));
+  submitter.save();
 
   round.save();
   request.save();
@@ -461,17 +497,16 @@ export function handleRequestChallenged(event: Dispute): void {
   item.latestChallenger = event.transaction.from;
   let newStatus = getExtendedStatus(item.disputed, item.status);
 
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.try_getRequestInfo(itemID, requestIndex);
-  if (requestInfo.reverted) {
-    log.error(
-      `Failed to fetch request info for LItem : {}, requestIndex : {}`,
-      [graphItemID, requestIndex.toString()],
-    );
-    item.save();
+  let requestIndex = safeDecrement(item.numberOfRequests);
+  let requestInfoResult = tcr.try_getRequestInfo(itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      itemID.toHexString(),
+      requestIndex.toString()
+    ]);
     return;
   }
-
+  let requestInfo = requestInfoResult.value;
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
@@ -516,7 +551,7 @@ export function handleAppealPossible(event: AppealPossible): void {
   }
 
   let requestID =
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+    item.id + '-' + safeDecrement(item.numberOfRequests).toString();
   let request = LRequest.load(requestID);
   if (!request) {
     log.error(`Appeal Possible LRequest {} not found. tx {}`, [
@@ -527,9 +562,7 @@ export function handleAppealPossible(event: AppealPossible): void {
   }
 
   let roundID =
-    request.id +
-    '-' +
-    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+    request.id + '-' + safeDecrement(request.numberOfRounds).toString();
   let round = LRound.load(roundID);
   if (!round) {
     log.error(`Appeal Possible LRound {} not found. tx {}`, [
@@ -577,7 +610,7 @@ export function handleAppealDecision(event: AppealDecision): void {
   }
 
   let requestID =
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+    item.id + '-' + safeDecrement(item.numberOfRequests).toString();
   let request = LRequest.load(requestID);
   if (!request) {
     log.error(`Appeal Decision LRequest {} not found. tx {}`, [
@@ -588,9 +621,7 @@ export function handleAppealDecision(event: AppealDecision): void {
   }
 
   let roundID =
-    request.id +
-    '-' +
-    request.numberOfRounds.minus(BigInt.fromI32(1)).toString();
+    request.id + '-' + safeDecrement(request.numberOfRounds).toString();
   let round = LRound.load(roundID);
   if (!round) {
     log.error(`Appeal Decision LRound {} not found. tx {}`, [
@@ -667,16 +698,16 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
      return;
   }
 
-  let requestIndex = item.numberOfRequests.minus(BigInt.fromI32(1));
-  let requestInfo = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
-  if (requestInfo.reverted) {
-    log.error(
-      `Failed to fetch request info for LItem : {}, requestIndex : {}`,
-      [graphItemID, requestIndex.toString()],
-    );
-    item.save();
+  let requestIndex = safeDecrement(item.numberOfRequests);
+  let requestInfoResult = tcr.try_getRequestInfo(event.params._itemID, requestIndex);
+  if (requestInfoResult.reverted) {
+    log.error(`Failed to get request info for item {} at request index {}`, [
+      event.params._itemID.toHexString(),
+      requestIndex.toString()
+    ]);
     return;
   }
+  let requestInfo = requestInfoResult.value;
 
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
@@ -689,7 +720,12 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   request.resolutionTime = event.block.timestamp;
   request.resolutionTx = event.transaction.hash;
   // requestInfo.value6 is request.ruling.
-  request.disputeOutcome = getFinalRuling(requestInfo.value.value6);
+  request.disputeOutcome = getFinalRuling(requestInfo.value6);
+
+  if (item.status == REGISTERED || item.status == ABSENT) {
+    // request just moved to a “finished” final state
+    moveRequestToPast(Address.fromBytes(request.requester));
+  }
 
   // Iterate over every contribution and mark it as withdrawable if it is.
   // Start from the second round as the first is automatically withdrawn
@@ -733,7 +769,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         // the contributors get to withdraw.
         if (contribution.side == BigInt.fromI32(REQUESTER_CODE)) {
           contribution.withdrawable = true;
-        } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
+        } else if (i.equals(safeDecrement(request.numberOfRounds))) {
           // Contribution was made to the challenger (loser) and this
           // is the last round.
           contribution.withdrawable = true;
@@ -747,7 +783,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         // the contributors get to withdraw.
         if (contribution.side == BigInt.fromI32(CHALLENGER_CODE)) {
           contribution.withdrawable = true;
-        } else if (i.equals(request.numberOfRounds.minus(BigInt.fromI32(1)))) {
+        } else if (i.equals(safeDecrement(request.numberOfRounds))) {
           // Contribution was made to the requester (loser) and this
           // is the last round.
           contribution.withdrawable = true;
@@ -930,7 +966,7 @@ export function handleRuling(event: Ruling): void {
   }
 
   let requestID =
-    item.id + '-' + item.numberOfRequests.minus(BigInt.fromI32(1)).toString();
+    item.id + '-' + safeDecrement(item.numberOfRequests).toString();
   let request = LRequest.load(requestID);
   if (!request) {
     log.error(`Ruling LRequest {} not found. tx {}`, [

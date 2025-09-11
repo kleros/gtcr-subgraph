@@ -447,3 +447,14 @@ type HasPaidAppealFee @entity {
   "Timestamp of the event"
   timestamp: BigInt!
 }
+
+type Submitter @entity {
+  "Lower-cased 0x address"
+  id: ID!
+  "How many requests this address has ever opened (first time only)."
+  totalSubmissions: BigInt!
+  "Open requests = still waiting for a final status."
+  ongoingSubmissions: BigInt!
+  "Finished requests (item ended up Absent/Removed or Registered)."
+  pastSubmissions: BigInt!
+}
