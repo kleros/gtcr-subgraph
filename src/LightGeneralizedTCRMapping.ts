@@ -41,7 +41,7 @@ import {
   Ruling,
   ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
-import { ZERO_ADDRESS, extractPath } from './utils';
+import { ZERO, ZERO_ADDRESS, extractPath } from './utils';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -284,7 +284,10 @@ export function handleNewItem(event: NewItem): void {
   const ipfsHash = extractPath(event.params._data);
   item.metadata = `${ipfsHash}-${graphItemID}`;
 
-  log.debug('Creating datasource for ipfs hash : {}', [ipfsHash]);
+  log.debug('Creating datasource for ipfs hash : {}, graphItemID: {}', [
+    ipfsHash,
+    graphItemID,
+  ]);
 
   const context = new DataSourceContext();
   context.setString('graphItemID', graphItemID);
@@ -685,6 +688,15 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   }
 
   item.latestRequestResolutionTime = event.block.timestamp;
+
+  if(item.numberOfRequests.equals(ZERO)){
+     log.error(
+       `Encountered 0 as numberOfRequest for Item : {}`,
+       [graphItemID],
+     );
+     item.save();
+     return;
+  }
 
   let requestIndex = safeDecrement(item.numberOfRequests);
   let requestInfoResult = tcr.try_getRequestInfo(event.params._itemID, requestIndex);

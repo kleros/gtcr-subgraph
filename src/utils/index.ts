@@ -75,3 +75,4 @@ export function JSONValueToBool(
       return _default;
   }
 }
+export const ZERO = BigInt.fromI32(0);

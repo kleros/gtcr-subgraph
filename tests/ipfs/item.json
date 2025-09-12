@@ -1,0 +1,48 @@
+{
+  "columns": [
+    {
+      "label": "Github Repository URL",
+      "description": "The URL of the repository containing the function that returns the Contract Tags.  The repository name must be in the kebab case (hyphen-case). ",
+      "type": "link",
+      "isIdentifier": true
+    },
+    {
+      "label": "Commit hash",
+      "description": "The hash of the specific commit for this repository to be referenced.",
+      "type": "text",
+      "isIdentifier": true
+    },
+    {
+      "label": "Chain ID",
+      "description": "The EVM integer Chain ID of the chain that the contracts being retrieved by the function in this module are on. This is informational only and not used as input for the functions.",
+      "type": "number",
+      "isIdentifier": true
+    },
+    {
+      "label": "Available on The Graph’s hosted service",
+      "description": "Boolean value indicating if the function can be called in an unauthenticated manner using The Graph’s hosted (unauthenticated) service.",
+      "type": "boolean",
+      "isIdentifier": true
+    },
+    {
+      "label": "Available on the decentralized Graph Network",
+      "description": "Boolean value indicating if the function can make use of indexed data from the decentralized Graph Network.",
+      "type": "boolean",
+      "isIdentifier": true
+    },
+    {
+      "label": "Description",
+      "description": "A field used to describe the range of contracts being curated here, specifying (if applicable) the version, type and purpose of the contracts that are returned. ",
+      "type": "long text",
+      "isIdentifier": false
+    }
+  ],
+  "values": {
+    "Github Repository URL": "https://github.com/gmkung/balancer-v2-pools-atq-module.git",
+    "Commit hash": " 628491a",
+    "Chain ID": "137",
+    "Available on The Graph’s hosted service": "true",
+    "Available on the decentralized Graph Network": "false",
+    "Description": "A module to retrieve address tags describing Balancer V2 pools on Polygon."
+  }
+}
