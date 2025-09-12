@@ -1,6 +1,6 @@
 {
   "name": "gtcr-subgraph",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "Subgraph for Generalized TCR contracts",
   "scripts": {
     "clean": "graph clean",

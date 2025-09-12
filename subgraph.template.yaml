@@ -1,5 +1,5 @@
 specVersion: 1.0.0
-description: Generalized TCR v1.2.1
+description: Generalized TCR v1.2.3
 features:
   - fullTextSearch
   - ipfsOnEthereumContracts
