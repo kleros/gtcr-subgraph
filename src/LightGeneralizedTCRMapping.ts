@@ -352,7 +352,7 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   request.arbitrator = tcr.arbitrator();
   request.arbitratorExtraData = tcr.arbitratorExtraData();
   request.challenger = ZERO_ADDRESS;
-  request.requester = requestInfo.value.value4[1];
+  request.requester = requestInfo.value4[1];
   request.item = item.id;
   request.registry = registry.id;
   request.registryAddress = event.address;
@@ -515,7 +515,7 @@ export function handleRequestChallenged(event: Dispute): void {
   }
 
   request.disputed = true;
-  request.challenger = requestInfo.value.value4[2];
+  request.challenger = requestInfo.value4[2];
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
 
@@ -756,11 +756,11 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
         return;
       }
 
-      if (requestInfo.value.value6 == NO_RULING_CODE) {
+      if (requestInfo.value6 == NO_RULING_CODE) {
         // The final ruling is refuse to rule. There is no winner
         // or loser so every contribution is withdrawable.
         contribution.withdrawable = true;
-      } else if (requestInfo.value.value6 == REQUESTER_CODE) {
+      } else if (requestInfo.value6 == REQUESTER_CODE) {
         // The requester won so only contributions to the requester
         // are withdrawable.
         // The only exception is in the case the last round the loser
