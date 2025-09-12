@@ -291,7 +291,14 @@ function createNewItem(itemID: Bytes, address: Bytes): LItem {
 }
 
 export function handleNewItem(event: NewItem): void {
-    let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString();
+  
+
+    log.warning(
+      'NewItem for itemId: {}, registry: {}',
+      [event.params._itemID.toHexString(), event.address.toHexString()],
+    );
+
+  let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString();
 
   // check if we already created this item in RequestSubmitted, just create the ipfs datasource now
   let item = LItem.load(graphItemID);
@@ -319,6 +326,13 @@ export function handleNewItem(event: NewItem): void {
 
 export function handleRequestSubmitted(event: RequestSubmitted): void {
   log.warning("Encountered requestSubmitted event, itemId: {}, evidenceGroupId: {}",[event.params._itemID.toHexString(), event.params._evidenceGroupID.toString()]);
+
+
+
+    log.warning(
+      'Found RequestSubmitted for itemId: {}, registry: {}',
+      [event.params._itemID.toHexString(), event.address.toHexString()],
+    );
 
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();

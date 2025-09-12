@@ -1,5 +1,5 @@
 /* eslint-disable prefer-const */
-import { Address, Bytes } from '@graphprotocol/graph-ts';
+import { Address, Bytes, log } from '@graphprotocol/graph-ts';
 import { NewGTCR } from '../generated/LightGTCRFactory/LightGTCRFactory';
 import { MetaEvidence, LRegistry } from '../generated/schema';
 import { LightGeneralizedTCR as LightGeneralizedTCRDataSource } from '../generated/templates';
@@ -36,5 +36,6 @@ export function createNewGTCR(address: Bytes):LRegistry {
 
 export function handleNewGTCR(event: NewGTCR): void {
 
- createNewGTCR(event.params._address)
+    log.warning('Found Registry event : {}',[event.params._address.toHexString()]);
+    createNewGTCR(event.params._address);
 }
