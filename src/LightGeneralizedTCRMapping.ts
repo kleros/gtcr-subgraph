@@ -4,6 +4,7 @@ import {
   Address,
   log,
   DataSourceContext,
+  Bytes,
 } from '@graphprotocol/graph-ts';
 import {
   LItem,
@@ -42,6 +43,7 @@ import {
   ConnectedTCRSet as ConnectedTCRSetEvent,
 } from '../generated/templates/LightGeneralizedTCR/LightGeneralizedTCR';
 import { ZERO, ZERO_ADDRESS, extractPath } from './utils';
+import { createNewGTCR } from './LightGTCRFactoryMapping';
 
 // Items on a TCR can be in 1 of 4 states:
 // - (0) Absent: The item is not registered on the TCR and there are no pending requests.
@@ -203,7 +205,7 @@ function updateCounters(
 ): void {
   let registry = LRegistry.load(registryAddress.toHexString());
   if (!registry) {
-    log.error(`LRegistry at {} not found.`, [registryAddress.toHexString()]);
+    log.error(`Counters LRegistry at {} not found.`, [registryAddress.toHexString()]);
     return;
   }
 
@@ -247,8 +249,7 @@ function updateCounters(
 
   registry.save();
 }
-
-export function handleNewItem(event: NewItem): void {
+function createNewItem(itemID: Bytes, address: Bytes): LItem {
   // We assume this is an item added via addItemDirectly and care
   // only about saving the item json data.
   // If it was emitted via addItem, all the missing/wrong data regarding
@@ -258,22 +259,27 @@ export function handleNewItem(event: NewItem): void {
   // Accounting for items added or removed directly is done
   // inside handleStatusUpdated.
   let graphItemID =
-    event.params._itemID.toHexString() + '@' + event.address.toHexString();
-  let gtcrContract = LightGeneralizedTCR.bind(event.address);
-  let registry = LRegistry.load(event.address.toHexString());
+    itemID.toHexString() + '@' + address.toHexString();
+  let gtcrContract = LightGeneralizedTCR.bind(Address.fromBytes(address));
+  let registry = LRegistry.load(address.toHexString());
   if (!registry) {
-    log.error(`LRegistry {} not found`, [event.address.toHexString()]);
-    return;
+    log.error(`New Item LRegistry {} not found, creating new`, [address.toHexString()]);
+    registry = createNewGTCR(address);
   }
 
-  let itemInfo = gtcrContract.getItemInfo(event.params._itemID);
+  let itemInfo = gtcrContract.getItemInfo(itemID);
 
-  let item = new LItem(graphItemID);
-  item.itemID = event.params._itemID;
-  item.data = event.params._data;
+  // we might create a dummy item in RequestSubmitted
+  let item = LItem.load(graphItemID);
+  if (!item) {
+    item = new LItem(graphItemID);
+  }
+
+  item.itemID = itemID;
+  item.data = ""; // since we use this function to create missing item, this will be set in NewItem event
   item.numberOfRequests = BigInt.fromI32(0);
   item.registry = registry.id;
-  item.registryAddress = event.address;
+  item.registryAddress = address;
   item.disputed = false;
   item.status = getStatus(itemInfo.value0);
   item.latestRequester = ZERO_ADDRESS;
@@ -281,25 +287,39 @@ export function handleNewItem(event: NewItem): void {
   item.latestRequestResolutionTime = BigInt.fromI32(0);
   item.latestRequestSubmissionTime = BigInt.fromI32(0);
 
+  return item;
+}
+
+export function handleNewItem(event: NewItem): void {
+    let graphItemID = event.params._itemID.toHexString() + '@' + event.address.toHexString();
+
+  // check if we already created this item in RequestSubmitted, just create the ipfs datasource now
+  let item = LItem.load(graphItemID);
+  if(!item){
+    item = createNewItem(event.params._itemID, event.address);
+  }
+
   const ipfsHash = extractPath(event.params._data);
-  item.metadata = `${ipfsHash}-${graphItemID}`;
+  item.data = event.params._data;
+  item.metadata = `${ipfsHash}-${item.id}`;
 
   log.debug('Creating datasource for ipfs hash : {}, graphItemID: {}', [
     ipfsHash,
-    graphItemID,
+    item.id,
   ]);
 
   const context = new DataSourceContext();
-  context.setString('graphItemID', graphItemID);
+  context.setString('graphItemID', item.id);
   context.setString('address', event.address.toHexString());
 
   LItemMetadataTemplate.createWithContext(ipfsHash, context);
 
   item.save();
-  registry.save();
 }
 
 export function handleRequestSubmitted(event: RequestSubmitted): void {
+  log.warning("Encountered requestSubmitted event, itemId: {}, evidenceGroupId: {}",[event.params._itemID.toHexString(), event.params._evidenceGroupID.toString()]);
+
   let graphItemID =
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
 
@@ -307,13 +327,13 @@ export function handleRequestSubmitted(event: RequestSubmitted): void {
   let itemInfo = tcr.getItemInfo(event.params._itemID);
   let item = LItem.load(graphItemID);
   if (!item) {
-    log.error(`LItem for graphItemID {} not found.`, [graphItemID]);
-    return;
+    log.error(`RequestSubmitted LItem for graphItemID {} not found. Creating new`, [graphItemID]);
+    item = createNewItem(event.params._itemID, event.address);
   }
 
   let registry = LRegistry.load(event.address.toHexString());
   if (!registry) {
-    log.error(`LRegistry at address {} not found`, [
+    log.error(`RequestSubmitted LRegistry at address {} not found`, [
       event.address.toHexString(),
     ]);
     return;
@@ -424,14 +444,14 @@ export function handleContribution(event: Contribution): void {
   let requestID = graphItemID + '-' + event.params._requestID.toString();
   let request = LRequest.load(requestID);
   if (!request) {
-    log.error(`LRequest {} no found.`, [requestID]);
+    log.error(`Contribution LRequest {} no found.`, [requestID]);
     return;
   }
 
   let roundID = requestID + '-' + event.params._roundID.toString();
   let round = LRound.load(roundID);
   if (!round) {
-    log.error(`LRound {} not found.`, [roundID]);
+    log.error(`Contribution LRound {} not found.`, [roundID]);
     return;
   }
 
@@ -488,7 +508,7 @@ export function handleRequestChallenged(event: Dispute): void {
   let graphItemID = itemID.toHexString() + '@' + event.address.toHexString();
   let item = LItem.load(graphItemID);
   if (!item) {
-    log.warning(`LItem {} not found.`, [graphItemID]);
+    log.warning(`Dispute LItem {} not found.`, [graphItemID]);
     return;
   }
 
@@ -510,7 +530,7 @@ export function handleRequestChallenged(event: Dispute): void {
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
-    log.error(`LRequest {} not found.`, [requestID]);
+    log.error(`Dispute LRequest {} not found.`, [requestID]);
     return;
   }
 
@@ -664,7 +684,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
     event.params._itemID.toHexString() + '@' + event.address.toHexString();
   let item = LItem.load(graphItemID);
   if (!item) {
-    log.error(`LItem {} not found.`, [graphItemID]);
+    log.error(`ItemStatusChange LItem {} not found.`, [graphItemID]);
     return;
   }
 
@@ -712,7 +732,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
   let requestID = graphItemID + '-' + requestIndex.toString();
   let request = LRequest.load(requestID);
   if (!request) {
-    log.error(`LRequest {} not found.`, [requestID]);
+    log.error(`ItemStatusChange LRequest {} not found.`, [requestID]);
     return;
   }
 
@@ -739,7 +759,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
     let roundID = requestID + '-' + i.toString();
     let round = LRound.load(roundID);
     if (!round) {
-      log.error(`LRound {} not found.`, [roundID]);
+      log.error(`ItemStatusChange LRound {} not found.`, [roundID]);
       return;
     }
 
@@ -752,7 +772,7 @@ export function handleStatusUpdated(event: ItemStatusChange): void {
       let contributionID = roundID + '-' + j.toString();
       let contribution = LContribution.load(contributionID);
       if (!contribution) {
-        log.error(`LContribution {} not found.`, [contributionID]);
+        log.error(`ItemStatusChange LContribution {} not found.`, [contributionID]);
         return;
       }
 
@@ -805,7 +825,7 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
   let roundID = requestID + '-' + event.params._round.toString();
   let round = LRound.load(roundID);
   if (!round) {
-    log.error(`LRound {} not found.`, [roundID]);
+    log.error(`RewardWithdrawn LRound {} not found.`, [roundID]);
     return;
   }
 
@@ -817,7 +837,7 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
     let contributionID = roundID + '-' + i.toString();
     let contribution = LContribution.load(contributionID);
     if (!contribution) {
-      log.error(`LContribution {} not found.`, [contributionID]);
+      log.error(`RewardWithdrawn LContribution {} not found.`, [contributionID]);
       return;
     }
     // Check if the contribution is from the beneficiary.
@@ -836,7 +856,7 @@ export function handleRewardWithdrawn(event: RewardWithdrawn): void {
 export function handleMetaEvidence(event: MetaEvidenceEvent): void {
   let registry = LRegistry.load(event.address.toHexString());
   if (!registry) {
-    log.error(`LRegistry {} not found.`, [event.address.toHexString()]);
+    log.error(`MetaEvidenceEvent LRegistry {} not found.`, [event.address.toHexString()]);
     return;
   }
 
@@ -897,7 +917,7 @@ export function handleMetaEvidence(event: MetaEvidenceEvent): void {
 export function handleConnectedTCRSet(event: ConnectedTCRSetEvent): void {
   let registry = LRegistry.load(event.address.toHexString());
   if (!registry) {
-    log.error(`LRegistry {} not found.`, [event.address.toHexString()]);
+    log.error(`ConnectedTCRSetEvent LRegistry {} not found.`, [event.address.toHexString()]);
     return;
   }
   registry.connectedTCR = event.params._connectedTCR;
