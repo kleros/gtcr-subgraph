@@ -263,9 +263,9 @@ type LRequest @entity {
   creationTx: Bytes!
   "The hash of the transaction that solved this request."
   resolutionTx: Bytes
-  "The hash of the transaction that challenged this request. Null if never challenged."
+  "The tx hash of the challenge that raised the dispute."
   txHashChallenge: Bytes
-  "The block timestamp when this request was challenged. More accurate than falling back to the challenger's earliest evidence timestamp."
+  "The block timestamp of the challenge."
   challengeTime: BigInt
 }
 
@@ -309,9 +309,9 @@ type LRound @entity {
   appealed: Boolean!
   "When this round was appealed, if it was appealed"
   appealedAt: BigInt
-  "The tx hash of the contribution that fully funded the requester's appeal in this round. Only set for appeal rounds (roundID > 0)."
+  "The tx hash of the moment the requester's appeal became fully funded."
   txHashAppealFundedRequester: Bytes
-  "The tx hash of the contribution that fully funded the challenger's appeal in this round. Only set for appeal rounds (roundID > 0)."
+  "The tx hash of the moment the challenger's appeal became fully funded."
   txHashAppealFundedChallenger: Bytes
 }
 
