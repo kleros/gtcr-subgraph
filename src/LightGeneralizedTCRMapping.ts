@@ -448,11 +448,23 @@ export function handleContribution(event: Contribution): void {
       event.params._roundID,
     );
 
+    // Capture the previous fully-funded state so we can detect the transition
+    // from "partially funded" → "fully funded" and record the tx that caused it.
+    let wasFullyFundedRequester = round.hasPaidRequester;
+    let wasFullyFundedChallenger = round.hasPaidChallenger;
+
     round.amountPaidRequester = roundInfo.value1[REQUESTER_CODE];
     round.amountPaidChallenger = roundInfo.value1[CHALLENGER_CODE];
     round.hasPaidRequester = roundInfo.value2[REQUESTER_CODE];
     round.hasPaidChallenger = roundInfo.value2[CHALLENGER_CODE];
     round.feeRewards = roundInfo.value3;
+
+    if (!wasFullyFundedRequester && round.hasPaidRequester) {
+      round.txHashAppealFundedRequester = event.transaction.hash;
+    }
+    if (!wasFullyFundedChallenger && round.hasPaidChallenger) {
+      round.txHashAppealFundedChallenger = event.transaction.hash;
+    }
   }
 
   if (event.params._side === 1) {
@@ -515,6 +527,8 @@ export function handleRequestChallenged(event: Dispute): void {
   request.challenger = requestInfo.value4[2];
   request.numberOfRounds = BigInt.fromI32(2);
   request.disputeID = event.params._disputeID;
+  request.txHashChallenge = event.transaction.hash;
+  request.challengeTime = event.block.timestamp;
 
   let newRoundID = requestID + '-1'; // When a dispute is created, the new round is always id 1
   let newRound = buildNewRound(newRoundID, request.id, event.block.timestamp);
